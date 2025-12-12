@@ -1,7 +1,7 @@
 // Configuration
 const RD_CONFIG = {
     token: 'b32e0b962e0ec0de400f8215112b8a08', 
-    eventId: 'solicitacao-parceria-phs-externo' 
+    eventId: 'solicitar-parceria' 
 };
 
 // --- Dados de Autocomplete ---
@@ -1257,7 +1257,6 @@ function setupNavigation() {
         handleNextStep();
     });
     
-    // Lógica de avanço por ENTER removida, mantendo apenas o clique no botão.
     // Opcional: Impedir que o ENTER envie o formulário em campos de texto simples
      form.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && e.target.type !== 'textarea') {
@@ -1339,9 +1338,11 @@ function validateCurrentQuestion() {
             break;
                 
         case 'checkbox-with-multiselect':
-            if (formData[question.field] === undefined || formData.question.field === null) {
+            // *CORRIGIDO AQUI*
+            const interesse = formData[question.field];
+            if (interesse === undefined || interesse === null) {
                 isValid = false;
-            } else if (formData.question.field === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
+            } else if (interesse === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
                 isValid = false;
                 errorDiv.textContent = 'Por favor, selecione ao menos um produto';
             }
