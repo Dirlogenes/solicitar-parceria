@@ -83,6 +83,9 @@ let currentStep = 0;
 let totalSteps = 0;
 let questions = [];
 
+// Estado global para controlar se o multiselect estava aberto antes da re-renderização
+let isMultiselectOpen = false;
+
 // Initialize form
 document.addEventListener('DOMContentLoaded', () => {
     buildQuestions();
@@ -284,11 +287,19 @@ function renderQuestion(step) {
     container.appendChild(questionDiv);
         
     // Setup event listeners
-    setupQuestionListeners(question); // Linha onde a função em falta estava a ser chamada
+    setupQuestionListeners(question);
     
     // Configura Autocomplete (Cidade/UF e Regiões de Curso)
     if (question.autocomplete) {
         setupAutocomplete(question);
+    }
+    
+    // CORREÇÃO DO BUG: Reabre o multiselect se ele estava aberto antes da re-renderização
+    if (isMultiselectOpen && (question.type === 'multiselect' || question.type === 'checkbox-with-multiselect')) {
+        const dropdown = document.getElementById('multiselect-dropdown') || document.getElementById('potenza-multiselect-dropdown');
+        if (dropdown) {
+            dropdown.classList.add('open');
+        }
     }
 }
 
@@ -463,7 +474,7 @@ function renderMultiselect(question) {
         html += `
             <div class="selected-item">
                 ${product}
-                <button type="button" onclick="removeProduct('${product}')">×</button>
+                <button type="button" onclick="removeProduct('${product}', event)">×</button>
             </div>
         `;
     });
@@ -491,7 +502,11 @@ function getAvailableProducts() {
     return products;
 }
 
-window.removeProduct = function(product) {
+// CORREÇÃO: Passa o evento e usa isMultiselectOpen
+window.removeProduct = function(product, event) {
+    event.stopPropagation();
+    isMultiselectOpen = document.getElementById('multiselect-dropdown').classList.contains('open');
+    
     formData.produtos = formData.produtos.filter(p => p !== product);
     renderQuestion(currentStep);
 };
@@ -578,7 +593,7 @@ function renderPotenzaMultiselect() {
         html += `
             <div class="selected-item">
                 ${product}
-                <button type="button" onclick="removePotenzaProduct('${product}')">×</button>
+                <button type="button" onclick="removePotenzaProduct('${product}', event)">×</button>
             </div>
         `;
     });
@@ -587,7 +602,11 @@ function renderPotenzaMultiselect() {
     return html;
 }
 
-window.removePotenzaProduct = function(product) {
+// CORREÇÃO: Passa o evento e usa isMultiselectOpen
+window.removePotenzaProduct = function(product, event) {
+    event.stopPropagation();
+    isMultiselectOpen = document.getElementById('potenza-multiselect-dropdown').classList.contains('open');
+
     formData.produtosPotenzaInteresse = formData.produtosPotenzaInteresse.filter(p => p !== product);
     renderQuestion(currentStep);
 };
@@ -642,875 +661,6 @@ function renderRadioWithInput(question) {
     html += '</div>';
     return html;
 }
-
-// Render course repeater (COMEÇA VAZIO)
-function renderCourseRepeater() {
-    let html = '<div id="courses-container">';
-    
-    formData.cursos.forEach((course, index) => {
-        html += renderCourseItem(course, index);
-    });
-
-    html += '</div>';
-    
-    if (formData.cursos.length < 5) {
-        html += '<button type="button" class="add-course" onclick="addCourse()">+ Cadastrar Curso</button>';
-    } else {
-        html += '<button type="button" class="add-course" disabled>Máximo de 5 cursos atingido</button>';
-    }
-
-    return html;
-}
-
-function renderCourseItem(course, index) {
-    const isClosed = course.isClosed; // Usa o novo campo de estado
-    const closedClass = isClosed ? 'closed' : '';
-    const arrow = isClosed ? '►' : '▼';
-    const canRemove = formData.cursos.length > 0;
-    const title = course.nome && course.nome.trim() !== '' ? 
-                  (course.nome.length > 30 ? course.nome.substring(0, 30) + '...' : course.nome) : 
-                  `Curso ${index + 1} (Aberto)`;
-
-    return `
-        <div class="course-item ${closedClass}" data-index="${index}">
-            <div class="course-header ${closedClass}" onclick="toggleCourse(${index})">
-                <div class="course-title">
-                    <span class="course-arrow">${arrow}</span> 
-                    ${title}
-                </div>
-                ${canRemove ? `<button type="button" class="remove-course" onclick="removeCourse(${index}, event)">Remover</button>` : ''}
-            </div>
-            
-            <div class="course-content ${closedClass}" id="course-content-${index}">
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Nome:</label>
-                    <input type="text" class="course-nome" data-index="${index}" value="${course.nome}" placeholder="Nome do curso..." required>
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Tipo:</label>
-                    <div class="checkbox-group">
-                        ${renderCourseTypes(course, index)}
-                    </div>
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Em quais regiões costuma realizar?</label>
-                    <input type="text" class="course-regioes" data-index="${index}" value="${course.regioes}" placeholder="Liste as cidades, estados, regiões e/ou países" required>
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Qual é a frequência?</label>
-                    <div class="radio-group">
-                        ${renderCourseFrequency(course, index)}
-                    </div>
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Qual a duração?</label>
-                    <input type="text" class="course-duracao" data-index="${index}" value="${course.duracao}" placeholder='Ex: "44h", "5 finais de semana", "1 semestre"' required>
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Qual costuma ser a média de alunos que participam?</label>
-                    <input type="text" class="course-alunos" data-index="${index}" value="${course.mediaAlunos}" placeholder="Ex: 20 alunos" required>
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Divulgação - Link:</label>
-                    <input type="url" class="course-divulgacao" data-index="${index}" value="${course.linkDivulgacao}" placeholder="https://...">
-                </div>
-                            
-                <div class="input-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Conteúdo - Link:</label>
-                    <input type="url" class="course-conteudo" data-index="${index}" value="${course.linkConteudo}" placeholder="https://...">
-                </div>
-                
-                <button type="button" class="btn btn-primary" onclick="toggleCourse(${index}, true)" style="width: 100%; margin-top: 20px;">
-                    <span>Concluir e Fechar Curso</span>
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-function createEmptyCourse() {
-    return {
-        nome: '',
-        tipos: [],
-        tipoOutro: '',
-        regioes: '',
-        frequencia: '',
-        duracao: '',
-        mediaAlunos: '',
-        linkDivulgacao: '',
-        linkConteudo: '',
-        isClosed: false 
-    };
-}
-
-window.addCourse = function() {
-    if (formData.cursos.length < 5) {
-        // Fecha todos os cursos abertos antes de criar um novo
-        formData.cursos.forEach(course => course.isClosed = true);
-        
-        formData.cursos.push(createEmptyCourse());
-        renderQuestion(currentStep);
-    }
-};
-
-window.removeCourse = function(index, event) {
-    event.stopPropagation(); 
-    if (formData.cursos.length > 0) {
-        formData.cursos.splice(index, 1);
-        renderQuestion(currentStep);
-    }
-};
-
-window.toggleCourse = function(index, forceClose = false) {
-    const course = formData.cursos[index];
-    if (!course) return;
-
-    if (forceClose) {
-        // Validação simples antes de fechar forçadamente
-        if (course.nome && course.nome.trim() !== '' && course.regioes && course.regioes.trim() !== '') {
-            course.isClosed = true;
-        } else {
-             alert('Por favor, preencha o Nome e Regiões do curso antes de fechar.');
-             return;
-        }
-    } else {
-        course.isClosed = !course.isClosed;
-    }
-    
-    // Se estiver a abrir, fecha os outros
-    if (!course.isClosed) {
-        formData.cursos.forEach((c, i) => {
-            if (i !== index) {
-                c.isClosed = true;
-            }
-        });
-    }
-
-    renderQuestion(currentStep); 
-}
-
-// Restante das funções (renderCourseTypes, renderCourseFrequency) mantidas
-
-// --- Lógica de Autocomplete (IBGE/Cidades) ---
-function setupAutocomplete(question) {
-    const input = document.getElementById(question.field);
-    const options = question.options || []; 
-
-    if (!input) return;
-
-    input.closest('.input-group').style.position = 'relative';
-
-    let listContainer = document.getElementById(`autocomplete-list-${question.field}`);
-    if (!listContainer) {
-        listContainer = document.createElement('div');
-        listContainer.className = 'autocomplete-list';
-        listContainer.id = `autocomplete-list-${question.field}`;
-        input.parentNode.insertBefore(listContainer, input.nextSibling);
-    }
-    
-    let activeItem = -1;
-
-    const renderList = (searchTerm) => {
-        listContainer.innerHTML = '';
-        activeItem = -1;
-        
-        if (searchTerm.length < 2) return;
-
-        const filteredOptions = options.filter(item => 
-            item.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        filteredOptions.forEach((item, index) => {
-            const div = document.createElement('div');
-            div.className = 'autocomplete-item';
-            div.textContent = item;
-            div.addEventListener('click', () => selectItem(item));
-            listContainer.appendChild(div);
-        });
-    };
-
-    const selectItem = (value) => {
-        formData[question.field] = value;
-        input.value = value;
-        listContainer.innerHTML = '';
-        input.classList.remove('error');
-    };
-
-    input.addEventListener('input', (e) => {
-        formData[question.field] = e.target.value;
-        renderList(e.target.value);
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.input-group') || e.target !== input) {
-            listContainer.innerHTML = '';
-        }
-    });
-
-    // Adiciona lógica de Teclado (ENTER/Arrow Keys)
-    input.addEventListener('keydown', (e) => {
-        const items = listContainer.querySelectorAll('.autocomplete-item');
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            activeItem = (activeItem + 1) % items.length;
-            items.forEach((item, index) => {
-                item.classList.remove('active');
-                if (index === activeItem) item.classList.add('active');
-            });
-            if (items[activeItem]) items[activeItem].scrollIntoView({ block: 'nearest' });
-
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            activeItem = (activeItem - 1 + items.length) % items.length;
-            items.forEach((item, index) => {
-                item.classList.remove('active');
-                if (index === activeItem) item.classList.add('active');
-            });
-            if (items[activeItem]) items[activeItem].scrollIntoView({ block: 'nearest' });
-
-        } else if (e.key === 'Enter' && activeItem > -1) {
-            e.preventDefault();
-            selectItem(items[activeItem].textContent);
-        }
-    });
-}
-
-// --- FIM Lógica de Autocomplete ---
-
-// Setup navigation (ADICIONADA LÓGICA DE ENTER)
-function setupNavigation() {
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const form = document.getElementById('phsForm');
-        
-    prevBtn.addEventListener('click', () => {
-        if (currentStep > 0) {
-            currentStep--;
-            renderQuestion(currentStep);
-            updateProgress();
-            updateNavigation();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    });
-        
-    nextBtn.addEventListener('click', () => {
-        handleNextStep();
-    });
-    
-    // Lógica para avanço com ENTER no formulário
-    form.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const inputField = e.target;
-            const isAutocompleteOpen = document.querySelector('.autocomplete-list').innerHTML.trim() !== '';
-
-            // Se o autocomplete estiver aberto, o ENTER deve selecionar, não avançar o formulário.
-            if (!isAutocompleteOpen && !e.shiftKey && !e.ctrlKey && !e.altKey) {
-                // Previne o envio padrão do formulário
-                e.preventDefault(); 
-                handleNextStep();
-            }
-        }
-    });
-}
-
-// Função de avanço do passo (usada pelo clique e pelo ENTER)
-function handleNextStep() {
-     if (validateCurrentQuestion()) {
-        if (currentStep < questions.length - 1) {
-            currentStep++;
-            // Skip conditional questions
-            while (currentStep < questions.length && questions[currentStep].conditional && !shouldShowQuestion(questions[currentStep])) {
-                currentStep++;
-            }
-            if (currentStep < questions.length) {
-                renderQuestion(currentStep);
-                updateProgress();
-                updateNavigation();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                submitForm();
-            }
-        } else {
-            submitForm();
-        }
-    }
-}
-
-// Validate current question (MUITO IMPORTANTE: Garante que campos de telefone e texto têm a validação de erro visual)
-function validateCurrentQuestion() {
-    const question = questions[currentStep];
-    const errorDiv = document.getElementById(`error-${question.id}`);
-    let isValid = true;
-    const input = document.getElementById(question.field);
-        
-    errorDiv.classList.remove('show');
-    if (input) input.classList.remove('error');
-
-    // Lógica de validação...
-    switch (question.type) {
-        case 'text':
-        case 'email':
-        case 'tel':
-            // Validação de Preenchimento Básico (Todos os campos de texto)
-            if (!formData[question.field] || formData[question.field].trim() === '') {
-                isValid = false;
-                errorDiv.textContent = 'Este campo é obrigatório';
-            } else if (question.validation === 'email' && !isValidEmail(formData[question.field])) {
-                isValid = false;
-                errorDiv.textContent = 'Por favor, insira um e-mail válido';
-            } else if (question.validation === 'phone' && !isValidPhone(formData[question.field])) {
-                isValid = false;
-                errorDiv.textContent = 'Por favor, insira um telefone válido com DDD (Ex: 47998887777)';
-            }
-            break;
-                
-        case 'checkbox':
-        case 'checkbox-exclusive':
-            if (formData[question.field].length === 0) {
-                isValid = false;
-                errorDiv.textContent = 'Selecione ao menos uma opção';
-            }
-            break;
-                
-        case 'multiselect':
-            if (!formData.produtos || formData.produtos.length === 0) {
-                isValid = false;
-                errorDiv.textContent = 'Selecione ao menos um produto';
-            }
-            break;
-        
-        case 'radio-with-other':
-            if (!formData[question.field]) {
-                isValid = false;
-            } else if (formData[question.field] === 'outro' && (!formData.motivoPotenzaOutro || formData.motivoPotenzaOutro.trim() === '')) {
-                isValid = false;
-                errorDiv.textContent = 'Por favor, especifique o motivo';
-            }
-            break;
-                
-        case 'checkbox-with-multiselect':
-            if (formData[question.field] === undefined || formData[question.field] === null) {
-                isValid = false;
-            } else if (formData[question.field] === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
-                isValid = false;
-                errorDiv.textContent = 'Por favor, selecione ao menos um produto';
-            }
-            break;
-                
-        case 'checkbox-with-inputs':
-            if (formData[question.field].length === 0) {
-                isValid = false;
-                errorDiv.textContent = 'Selecione ao menos uma opção';
-            } else {
-                const selected = formData[question.field];
-                if (selected.includes('dentais') && (!formData.parceriasOdonto || formData.parceriasOdonto.trim() === '')) {
-                    isValid = false;
-                    errorDiv.textContent = 'Por favor, liste suas dentais parceiras.';
-                } else if (selected.includes('empresas') && (!formData.parceriasEmpresas || formData.parceriasEmpresas.trim() === '')) {
-                    isValid = false;
-                    errorDiv.textContent = 'Por favor, liste as empresas parceiras.';
-                }
-            }
-            break;
-                
-        case 'radio-with-input':
-            if (formData[question.field] === undefined) {
-                isValid = false;
-            } else if (formData[question.field] === true && (!formData.exclusividadeLista || formData.exclusividadeLista.trim() === '')) {
-                isValid = false;
-                errorDiv.textContent = 'Por favor, liste as parcerias com exclusividade';
-            }
-            break;
-                
-        case 'course-repeater':
-            isValid = validateCourses();
-            if (!isValid) {
-                errorDiv.textContent = 'Por favor, preencha todos os campos obrigatórios dos cursos';
-            }
-            break;
-    }
-        
-    if (!isValid) {
-        errorDiv.classList.add('show');
-        if (input) input.classList.add('error');
-        // Adiciona classe de erro aos inputs condicionais
-        document.querySelectorAll(`#questionsContainer .conditional-input input`).forEach(input => {
-            if (!input.value || input.value.trim() === '') {
-                input.classList.add('error');
-            } else {
-                input.classList.remove('error');
-            }
-        });
-
-    }
-        
-    return isValid;
-}
-
-// Validate courses (Adicionado validação de campos vazios visuais)
-function validateCourses() {
-    let allCoursesValid = true;
-    
-    // Se não houver cursos, mas a parceria for cursos, precisa de pelo menos 1
-    if (formData.tiposParceria.includes('cursos') && formData.cursos.length === 0) {
-        return false;
-    }
-
-    formData.cursos.forEach((course, index) => {
-        const itemElement = document.querySelector(`.course-item[data-index="${index}"]`);
-        
-        // Verifica campos obrigatórios
-        if (!course.nome || course.nome.trim() === '' || course.tipos.length === 0 || !course.regioes || course.regioes.trim() === '' || 
-            !course.frequencia || course.frequencia.trim() === '' || !course.duracao || course.duracao.trim() === '' || !course.mediaAlunos || course.mediaAlunos.trim() === '') {
-            allCoursesValid = false;
-        }
-        if (course.tipos.includes('outro') && (!course.tipoOutro || course.tipoOutro.trim() === '')) {
-            allCoursesValid = false;
-        }
-
-        // Aplica classe de erro visual nos inputs
-        if (!allCoursesValid) {
-            itemElement.classList.add('error-course');
-            // Abre o curso se for inválido
-            course.isClosed = false;
-        } else {
-            itemElement.classList.remove('error-course');
-        }
-    });
-
-    return allCoursesValid;
-}
-
-
-// Email validation (mantida)
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-// Phone validation (mantida)
-function isValidPhone(phone) {
-    const cleaned = phone.replace(/\D/g, '');
-    // Considera 10 (DD + 8 dígitos) ou 11 (DD + 9 dígitos)
-    return cleaned.length >= 10; 
-}
-
-// Update progress (mantida)
-function updateProgress() {
-    const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
-    totalSteps = visibleQuestions.length;
-    const visibleIndex = visibleQuestions.findIndex(q => q.id === questions[currentStep].id);
-    const currentVisibleStep = visibleIndex !== -1 ? visibleIndex + 1 : currentStep + 1;
-    const progress = (currentVisibleStep / totalSteps) * 100;
-    document.getElementById('progressBar').style.width = `${progress}%`;
-}
-
-// Update navigation buttons (mantida)
-function updateNavigation() {
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    prevBtn.style.display = currentStep > 0 ? 'flex' : 'none';
-    const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
-    const isLastStep = questions[currentStep].id === visibleQuestions[visibleQuestions.length - 1].id;
-    if (isLastStep) {
-        nextBtn.querySelector('span').textContent = 'Enviar Solicitação de Parceria';
-    } else {
-        nextBtn.querySelector('span').textContent = 'Continuar →';
-    }
-}
-
-// FUNÇÃO CHAVE EM FALTA (setupQuestionListeners) - REINTRODUZIDA
-function setupQuestionListeners(question) {
-    const textInput = document.getElementById(question.field);
-    if (textInput) {
-        textInput.addEventListener('input', (e) => {
-            formData[question.field] = e.target.value;
-        });
-    }
-        
-    if (question.type === 'checkbox' || question.type === 'checkbox-exclusive') {
-        const checkboxes = document.querySelectorAll('.checkbox-option');
-        checkboxes.forEach(div => {
-            const checkbox = div.querySelector('input[type="checkbox"]');
-            checkbox.addEventListener('change', (e) => {
-                handleCheckboxChange(question, e.target.value, e.target.checked);
-                div.classList.toggle('selected', e.target.checked);
-                if (question.type === 'checkbox-exclusive') {
-                    renderQuestion(currentStep);
-                }
-            });
-        });
-    }
-        
-    if (question.type === 'multiselect') {
-        setupMultiselect();
-    }
-        
-    if (question.type === 'radio-with-other') {
-        const radios = document.querySelectorAll(`input[name="${question.field}"]`);
-        radios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                formData[question.field] = e.target.value;
-                document.querySelectorAll('.radio-option').forEach(div => {
-                    div.classList.remove('selected');
-                });
-                e.target.closest('.radio-option').classList.add('selected');
-                document.querySelectorAll('.conditional-input').forEach(input => {
-                    input.classList.remove('show');
-                });
-                const conditionalInput = document.getElementById(`input-${e.target.value}`);
-                if (conditionalInput) {
-                    conditionalInput.classList.add('show');
-                }
-            });
-        });
-                
-        const otherInput = document.getElementById(`${question.field}-outro`);
-        if (otherInput) {
-            otherInput.addEventListener('input', (e) => {
-                formData.motivoPotenzaOutro = e.target.value;
-            });
-        }
-    }
-        
-    if (question.type === 'checkbox-with-multiselect') {
-        const radios = document.querySelectorAll(`input[name="${question.field}"]`);
-        radios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                formData[question.field] = e.target.value === 'true';
-                document.querySelectorAll('.radio-option').forEach(div => {
-                    div.classList.remove('selected');
-                });
-                e.target.closest('.radio-option').classList.add('selected');
-                const multiselect = document.getElementById('potenza-multiselect');
-                if (multiselect) {
-                    if (e.target.value === 'true') {
-                        multiselect.classList.add('show');
-                        setupPotenzaMultiselect();
-                    } else {
-                        multiselect.classList.remove('show');
-                    }
-                }
-            });
-        });
-    }
-        
-    if (question.type === 'checkbox-with-inputs') {
-        const checkboxes = document.querySelectorAll('.checkbox-option');
-        checkboxes.forEach(div => {
-            const checkbox = div.querySelector('input[type="checkbox"]');
-            checkbox.addEventListener('change', (e) => {
-                handleCheckboxChange(question, e.target.value, e.target.checked);
-                div.classList.toggle('selected', e.target.checked);
-                const conditionalInput = document.getElementById(`input-${e.target.value}`);
-                if (conditionalInput) {
-                    if (e.target.checked) {
-                        conditionalInput.classList.add('show');
-                    } else {
-                        conditionalInput.classList.remove('show');
-                    }
-                }
-            });
-        });
-                
-        const odonto = document.getElementById('parceriasOdonto');
-        if (odonto) {
-            odonto.addEventListener('input', (e) => {
-                formData.parceriasOdonto = e.target.value;
-            });
-        }
-                
-        const empresas = document.getElementById('parceriasEmpresas');
-        if (empresas) {
-            empresas.addEventListener('input', (e) => {
-                formData.parceriasEmpresas = e.target.value;
-            });
-        }
-    }
-        
-    if (question.type === 'radio-with-input') {
-        const radios = document.querySelectorAll(`input[name="${question.field}"]`);
-        radios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                formData[question.field] = e.target.value === 'true';
-                document.querySelectorAll('.radio-option').forEach(div => {
-                    div.classList.remove('selected');
-                });
-                e.target.closest('.radio-option').classList.add('selected');
-                const input = document.getElementById('input-exclusividade');
-                if (input) {
-                    if (e.target.value === 'true') {
-                        input.classList.add('show');
-                    } else {
-                        input.classList.remove('show');
-                    }
-                }
-            });
-        });
-                
-        const exclusividadeInput = document.getElementById('exclusividadeLista');
-        if (exclusividadeInput) {
-            exclusividadeInput.addEventListener('input', (e) => {
-                formData.exclusividadeLista = e.target.value;
-            });
-        }
-    }
-        
-    if (question.type === 'course-repeater') {
-        setupCourseListeners();
-    }
-}
-// FIM da função setupQuestionListeners (Reintroduzida)
-
-function handleCheckboxChange(question, value, checked) {
-    if (checked) {
-        if (!formData[question.field].includes(value)) {
-            formData[question.field].push(value);
-        }
-    } else {
-        formData[question.field] = formData[question.field].filter(v => v !== value);
-    }
-}
-
-// Setup multiselect (Mantido)
-function setupMultiselect() {
-    const trigger = document.getElementById('multiselect-trigger');
-    const dropdown = document.getElementById('multiselect-dropdown');
-    const search = document.getElementById('multiselect-search');
-    const options = document.querySelectorAll('#multiselect-options .multiselect-option');
-    const selectedValues = formData.produtos || [];
-    
-    if (trigger && dropdown) {
-        trigger.addEventListener('click', () => {
-            dropdown.classList.toggle('open');
-        });
-                
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.multiselect-container')) {
-                dropdown.classList.remove('open');
-            }
-        });
-    }
-    
-    options.forEach(option => {
-        const value = option.dataset.value;
-        const isSelected = selectedValues.includes(value);
-
-        if (isSelected) {
-            option.style.display = 'none';
-        } else {
-            option.style.display = 'flex';
-        }
-
-        option.addEventListener('click', () => {
-            const checkbox = option.querySelector('input[type="checkbox"]');
-                        
-            if (formData.produtos.includes(value)) {
-                formData.produtos = formData.produtos.filter(p => p !== value);
-                checkbox.checked = false;
-            } else {
-                formData.produtos.push(value);
-                checkbox.checked = true;
-            }
-                        
-            renderQuestion(currentStep); 
-        });
-    });
-
-    if (search) {
-        search.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            options.forEach(option => {
-                const text = option.textContent.toLowerCase();
-                const value = option.dataset.value;
-                const isSelected = selectedValues.includes(value);
-
-                if (!isSelected && text.includes(searchTerm)) {
-                    option.style.display = 'flex';
-                } else {
-                    option.style.display = 'none';
-                }
-            });
-        });
-    }
-}
-
-// Update selected items display (Mantido)
-function updateSelectedItems() {
-    const container = document.getElementById('selected-items');
-    if (!container) return;
-        
-    container.innerHTML = '';
-    formData.produtos.forEach(product => {
-        const item = document.createElement('div');
-        item.className = 'selected-item';
-        item.innerHTML = `
-            ${product}
-            <button type="button" onclick="removeProduct('${product}')">×</button>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// Setup Potenza multiselect (Mantido)
-function setupPotenzaMultiselect() {
-    const trigger = document.getElementById('potenza-multiselect-trigger');
-    const dropdown = document.getElementById('potenza-multiselect-dropdown');
-    const options = document.querySelectorAll('#potenza-multiselect-options .multiselect-option');
-    const selectedValues = formData.produtosPotenzaInteresse || [];
-        
-    if (trigger && dropdown) {
-        trigger.addEventListener('click', () => {
-            dropdown.classList.toggle('open');
-        });
-                
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#potenza-multiselect')) {
-                dropdown.classList.remove('open');
-            }
-        });
-    }
-        
-    options.forEach(option => {
-        const value = option.dataset.value;
-        const isSelected = selectedValues.includes(value);
-
-        if (isSelected) {
-            option.style.display = 'none';
-        } else {
-            option.style.display = 'flex';
-        }
-        
-        option.addEventListener('click', () => {
-            const checkbox = option.querySelector('input[type="checkbox"]');
-                        
-            if (!formData.produtosPotenzaInteresse) {
-                formData.produtosPotenzaInteresse = [];
-            }
-                        
-            if (formData.produtosPotenzaInteresse.includes(value)) {
-                formData.produtosPotenzaInteresse = formData.produtosPotenzaInteresse.filter(p => p !== value);
-                checkbox.checked = false;
-            } else {
-                formData.produtosPotenzaInteresse.push(value);
-                checkbox.checked = true;
-            }
-                        
-            renderQuestion(currentStep);
-        });
-    });
-}
-
-// Update Potenza selected items (Mantido)
-function updatePotenzaSelectedItems() {
-    const container = document.getElementById('potenza-selected-items');
-    if (!container) return;
-        
-    container.innerHTML = '';
-    formData.produtosPotenzaInteresse.forEach(product => {
-        const item = document.createElement('div');
-        item.className = 'selected-item';
-        item.innerHTML = `
-            ${product}
-            <button type="button" onclick="removePotenzaProduct('${product}')">×</button>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// Setup course listeners (Mantido)
-function setupCourseListeners() {
-    document.querySelectorAll('.course-nome').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].nome = e.target.value;
-        });
-    });
-    
-    // ... (Restante do setupCourseListeners)
-    document.querySelectorAll('.course-tipo').forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            const value = e.target.value;
-            if (e.target.checked) {
-                if (!formData.cursos[index].tipos.includes(value)) {
-                    formData.cursos[index].tipos.push(value);
-                }
-                if (value === 'outro') {
-                    const outroInput = document.getElementById(`course-outro-${index}`);
-                    if (outroInput) outroInput.classList.add('show');
-                }
-            } else {
-                formData.cursos[index].tipos = formData.cursos[index].tipos.filter(t => t !== value);
-                if (value === 'outro') {
-                    const outroInput = document.getElementById(`course-outro-${index}`);
-                    if (outroInput) outroInput.classList.remove('show');
-                }
-            }
-            e.target.closest('.checkbox-option').classList.toggle('selected', e.target.checked);
-        });
-    });
-    
-    document.querySelectorAll('.course-tipo-outro').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].tipoOutro = e.target.value;
-        });
-    });
-
-    document.querySelectorAll('.course-regioes').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].regioes = e.target.value;
-        });
-    });
-
-    document.querySelectorAll('.course-frequencia').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].frequencia = e.target.value;
-            document.querySelectorAll(`input[name="freq-${index}"]`).forEach(r => {
-                r.closest('.radio-option').classList.toggle('selected', r.checked);
-            });
-        });
-    });
-
-    document.querySelectorAll('.course-duracao').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].duracao = e.target.value;
-        });
-    });
-
-    document.querySelectorAll('.course-alunos').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].mediaAlunos = e.target.value;
-        });
-    });
-
-    document.querySelectorAll('.course-divulgacao').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].linkDivulgacao = e.target.value;
-        });
-    });
-
-    document.querySelectorAll('.course-conteudo').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            formData.cursos[index].linkConteudo = e.target.value;
-        });
-    });
-}
-// Setup course listeners (FIM)
-
 
 // Render course repeater (COMEÇA VAZIO)
 function renderCourseRepeater() {
@@ -1786,9 +936,172 @@ function setupAutocomplete(question) {
 // --- FIM Lógica de Autocomplete ---
 
 
-// ==========================================================
-// FUNÇÕES DE FORMATAÇÃO DE DADOS (MANTIDAS)
-// ==========================================================
+// Setup navigation (Mantido)
+function setupNavigation() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const form = document.getElementById('phsForm');
+        
+    prevBtn.addEventListener('click', () => {
+        if (currentStep > 0) {
+            currentStep--;
+            renderQuestion(currentStep);
+            updateProgress();
+            updateNavigation();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+        
+    nextBtn.addEventListener('click', () => {
+        handleNextStep();
+    });
+    
+    // Lógica para avanço com ENTER no formulário
+    form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const inputField = e.target;
+            const isAutocompleteOpen = document.querySelector('.autocomplete-list').innerHTML.trim() !== '';
+
+            if (!isAutocompleteOpen && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                e.preventDefault(); 
+                handleNextStep();
+            }
+        }
+    });
+}
+
+// Função de avanço do passo (usada pelo clique e pelo ENTER)
+function handleNextStep() {
+     if (validateCurrentQuestion()) {
+        if (currentStep < questions.length - 1) {
+            currentStep++;
+            // Skip conditional questions
+            while (currentStep < questions.length && questions[currentStep].conditional && !shouldShowQuestion(questions[currentStep])) {
+                currentStep++;
+            }
+            if (currentStep < questions.length) {
+                renderQuestion(currentStep);
+                updateProgress();
+                updateNavigation();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                submitForm();
+            }
+        } else {
+            submitForm();
+        }
+    }
+}
+
+// Validate current question (Mantido)
+function validateCurrentQuestion() {
+    const question = questions[currentStep];
+    const errorDiv = document.getElementById(`error-${question.id}`);
+    let isValid = true;
+    const input = document.getElementById(question.field);
+        
+    errorDiv.classList.remove('show');
+    if (input) input.classList.remove('error');
+
+    switch (question.type) {
+        case 'text':
+        case 'email':
+        case 'tel':
+            if (!formData[question.field] || formData[question.field].trim() === '') {
+                isValid = false;
+                errorDiv.textContent = 'Este campo é obrigatório';
+            } else if (question.validation === 'email' && !isValidEmail(formData[question.field])) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, insira um e-mail válido';
+            } else if (question.validation === 'phone' && !isValidPhone(formData[question.field])) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, insira um telefone válido com DDD (Ex: 47998887777)';
+            }
+            break;
+                
+        case 'checkbox':
+        case 'checkbox-exclusive':
+            if (formData[question.field].length === 0) {
+                isValid = false;
+                errorDiv.textContent = 'Selecione ao menos uma opção';
+            }
+            break;
+                
+        case 'multiselect':
+            if (!formData.produtos || formData.produtos.length === 0) {
+                isValid = false;
+                errorDiv.textContent = 'Selecione ao menos um produto';
+            }
+            break;
+        
+        case 'radio-with-other':
+            if (!formData[question.field]) {
+                isValid = false;
+            } else if (formData[question.field] === 'outro' && (!formData.motivoPotenzaOutro || formData.motivoPotenzaOutro.trim() === '')) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, especifique o motivo';
+            }
+            break;
+                
+        case 'checkbox-with-multiselect':
+            if (formData[question.field] === undefined || formData.question.field === null) {
+                isValid = false;
+            } else if (formData.question.field === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, selecione ao menos um produto';
+            }
+            break;
+                
+        case 'checkbox-with-inputs':
+            if (formData[question.field].length === 0) {
+                isValid = false;
+                errorDiv.textContent = 'Selecione ao menos uma opção';
+            } else {
+                const selected = formData[question.field];
+                if (selected.includes('dentais') && (!formData.parceriasOdonto || formData.parceriasOdonto.trim() === '')) {
+                    isValid = false;
+                    errorDiv.textContent = 'Por favor, liste suas dentais parceiras.';
+                } else if (selected.includes('empresas') && (!formData.parceriasEmpresas || formData.parceriasEmpresas.trim() === '')) {
+                    isValid = false;
+                    errorDiv.textContent = 'Por favor, liste as empresas parceiras.';
+                }
+            }
+            break;
+                
+        case 'radio-with-input':
+            if (formData[question.field] === undefined) {
+                isValid = false;
+            } else if (formData[question.field] === true && (!formData.exclusividadeLista || formData.exclusividadeLista.trim() === '')) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, liste as parcerias com exclusividade';
+            }
+            break;
+                
+        case 'course-repeater':
+            isValid = validateCourses();
+            if (!isValid) {
+                errorDiv.textContent = 'Por favor, preencha todos os campos obrigatórios dos cursos';
+            }
+            break;
+    }
+        
+    if (!isValid) {
+        errorDiv.classList.add('show');
+        if (input) input.classList.add('error');
+        document.querySelectorAll(`#questionsContainer .conditional-input input`).forEach(input => {
+            if (!input.value || input.value.trim() === '') {
+                input.classList.add('error');
+            } else {
+                input.classList.remove('error');
+            }
+        });
+    }
+        
+    return isValid;
+}
+
+
+// Restante das funções de validação e formatação (mantidas)
 
 function formatTiposParceria() { 
     if (formData.tiposParceria.length === 0) return '';
@@ -1865,7 +1178,7 @@ function formatCursos() {
 }
 
 
-// Submit form to RD Station (MANTIDO)
+// Submit form to RD Station (Mantido)
 async function submitForm() {
     document.getElementById('loadingSpinner').style.display = 'flex';
     
