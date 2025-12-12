@@ -1393,7 +1393,7 @@ function updateNavigation() {
     }
 }
 
-// Build concatenated text for RD - CORRIGIDO PARA MELHOR LEITURA NO RD STATION
+// Build concatenated text for RD - OTIMIZADO PARA MÁXIMA LEITURA E ESTRUTURA
 function buildConcatenatedText() {
     let text = [];
     
@@ -1404,7 +1404,7 @@ function buildConcatenatedText() {
 
     // Instagram
     if (formData.instagram) {
-        text.push(`[Instagram]: @${formData.instagram}`);
+        text.push(`[INFO: Instagram]: @${formData.instagram}`);
     }
 
     // Tipos de parceria
@@ -1414,7 +1414,7 @@ function buildConcatenatedText() {
             if (t === 'cursos') return 'Cursos, treinamentos e/ou Hands-on';
             return t;
         }).join(' | ');
-        text.push(`[Tipo de Parceria]: ${tipos}`);
+        text.push(`[INFO: Tipo de Parceria]: ${tipos}`);
     }
     
     // ==========================================================
@@ -1431,14 +1431,14 @@ function buildConcatenatedText() {
             if (m === 'nao-utilizei') return 'Ainda não utilizei';
             return m;
         }).join(' | ');
-        text.push(`[Marcas Utilizadas]: ${marcas}`);
+        text.push(`[PRODUTO: Marcas Utilizadas]: ${marcas}`);
     }
 
     // Produtos
     if (formData.produtos.length > 0) {
         const usedBrands = formData.marcas.includes('nao-utilizei');
-        const questionType = usedBrands ? 'Produtos que gostaria de utilizar' : 'Produtos com conhecimento e domínio';
-        text.push(`[${questionType}]: ${formData.produtos.join(' | ')}`);
+        const questionType = usedBrands ? 'Produtos de Interesse' : 'Produtos de Domínio';
+        text.push(`[PRODUTO: ${questionType}]: ${formData.produtos.join(' | ')}`);
     }
 
     // Motivo Potenza
@@ -1449,16 +1449,16 @@ function buildConcatenatedText() {
         if (motivo === 'testei') motivo = 'Testei e não me adaptei';
         if (motivo === 'outro' && formData.motivoPotenzaOutro) motivo = formData.motivoPotenzaOutro;
         
-        text.push(`[Motivo não usar Potenza]: ${motivo}`);
+        text.push(`[PRODUTO: Motivo não usar Potenza]: ${motivo}`);
     }
 
     // Interesse em Potenza
     if (shouldShowQuestion({ id: 'q8.4' }) && formData.interessePotenza !== undefined && formData.interessePotenza !== null) {
         const interesse = formData.interessePotenza ? 'Sim' : 'Não';
-        text.push(`[Interesse em testar Potenza]: ${interesse}`);
+        text.push(`[PRODUTO: Interesse em testar Potenza]: ${interesse}`);
         
         if (formData.interessePotenza && formData.produtosPotenzaInteresse && formData.produtosPotenzaInteresse.length > 0) {
-            text.push(`[Produtos Potenza de interesse]: ${formData.produtosPotenzaInteresse.join(' | ')}`);
+            text.push(`[PRODUTO: Potenza de interesse]: ${formData.produtosPotenzaInteresse.join(' | ')}`);
         }
     }
     
@@ -1480,19 +1480,19 @@ function buildConcatenatedText() {
                 if (formData.parceriasEmpresas) label += `: ${formData.parceriasEmpresas}`;
                 return label;
             }
-            if (p === 'nenhuma') return 'Não possuo parcerias ativas';
+            if (p === 'nenhuma') return 'Não possui parcerias ativas';
             return p;
         }).join(' | ');
-        text.push(`[Status Parcerias]: ${parcerias}`);
+        text.push(`[PARCERIA: Status Geral]: ${parcerias}`);
     }
 
     // Exclusividade
     if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined && formData.exclusividade !== null) {
         const excl = formData.exclusividade ? 'Sim' : 'Não';
-        text.push(`[Exclusividade]: ${excl}`);
+        text.push(`[PARCERIA: Exclusividade]: ${excl}`);
         
         if (formData.exclusividade && formData.exclusividadeLista) {
-            text.push(`[Parcerias com exclusividade]: ${formData.exclusividadeLista}`);
+            text.push(`[PARCERIA: Detalhes Exclusividade]: ${formData.exclusividadeLista}`);
         }
     }
 
@@ -1501,13 +1501,13 @@ function buildConcatenatedText() {
     // ==========================================================
     if (formData.tiposParceria.includes('cursos') && formData.cursos.length > 0) {
         text.push('\n======================== CURSOS ========================');
-        text.push(`[Total Cursos Cadastrados]: ${formData.cursos.length}`);
+        text.push(`[CURSO: Total Cadastrados]: ${formData.cursos.length}`);
         
         formData.cursos.forEach((course, index) => {
-            text.push(`\n--- CURSO ${index + 1} (${course.nome || 'Sem Nome'}) ---`);
+            // -- Início de cada curso com mais quebra de linha --
+            text.push(`\n\n--- CURSO ${index + 1}: ${course.nome || 'Sem Nome'} ---`);
             
             const tipos = course.tipos.map(t => {
-                // Mapeamento de Tipos (simplificado)
                 let label = '';
                 if (t === 'teorico') label = 'Teórico';
                 else if (t === 'pratico') label = 'Prático';
@@ -1517,28 +1517,28 @@ function buildConcatenatedText() {
                 else if (t === 'imersao') label = 'Imersão';
                 else if (t === 'outro' && course.tipoOutro) label = `Outro: ${course.tipoOutro}`;
                 return label;
-            }).filter(l => l).join(', '); // Filtra vazios e junta
+            }).filter(l => l).join(', ');
 
-            text.push(`Tipo: ${tipos}`);
-            text.push(`Regiões: ${course.regioes}`);
+            text.push(`- Tipo: ${tipos}`);
+            text.push(`- Regiões: ${course.regioes}`);
             
             const freq = course.frequencia === 'fixas' ? 'Datas fixas e definidas com antecedência' : 'De acordo com demanda';
-            text.push(`Frequência: ${freq}`);
+            text.push(`- Frequência: ${freq}`);
             
-            text.push(`Duração: ${course.duracao}`);
-            text.push(`Média de alunos: ${course.mediaAlunos}`);
+            text.push(`- Duração: ${course.duracao}`);
+            text.push(`- Média de alunos: ${course.mediaAlunos}`);
             
             if (course.linkDivulgacao) {
-                text.push(`Link Divulgação: ${course.linkDivulgacao}`);
+                text.push(`- Link Divulgação: ${course.linkDivulgacao}`);
             }
             
             if (course.linkConteudo) {
-                text.push(`Link Conteúdo: ${course.linkConteudo}`);
+                text.push(`- Link Conteúdo: ${course.linkConteudo}`);
             }
         });
     }
     
-    return text.join('\n'); // Mantemos o \n para o RD Station
+    return text.join('\n'); 
 }
 
 // Função auxiliar para mostrar a tela de sucesso
