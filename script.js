@@ -80,7 +80,7 @@ let isMultiselectOpen = false;
 // FUNÇÕES CRÍTICAS (DEFINIÇÃO GARANTIDA NO TOPO)
 // ==========================================================
 
-// --- FUNÇÃO CRÍTICA FALTANTE ---
+// --- FUNÇÃO DE MANIPULAÇÃO DE CHECKBOX/ARRAY ---
 function handleCheckboxChange(question, value, checked) {
     if (checked) {
         if (!formData[question.field].includes(value)) {
@@ -145,7 +145,7 @@ function setupQuestionListeners(question) {
         checkboxes.forEach(div => {
             const checkbox = div.querySelector('input[type="checkbox"]');
             checkbox.addEventListener('change', (e) => {
-                handleCheckboxChange(question, e.target.value, e.target.checked); // AGORA handleCheckboxChange EXISTE
+                handleCheckboxChange(question, e.target.value, e.target.checked); 
                 div.classList.toggle('selected', e.target.checked);
                 if (question.type === 'checkbox-exclusive') {
                     renderQuestion(currentStep);
@@ -194,14 +194,11 @@ function setupQuestionListeners(question) {
                     div.classList.remove('selected');
                 });
                 e.target.closest('.radio-option').classList.add('selected');
-                const multiselect = document.getElementById('potenza-multiselect');
-                if (multiselect) {
-                    if (e.target.value === 'true') {
-                        multiselect.classList.add('show');
-                        setupPotenzaMultiselect();
-                    } else {
-                        multiselect.classList.remove('show');
-                    }
+                
+                const multiselectContainer = document.getElementById('potenza-multiselect');
+                if (multiselectContainer) {
+                    // Re-renderiza para aplicar a classe 'show' e ligar os eventos do multiselect Potenza
+                    renderQuestion(currentStep); 
                 }
             });
         });
@@ -273,7 +270,7 @@ function setupQuestionListeners(question) {
     }
 }
 
-// Setup Multiselect (mantido)
+// Setup Multiselect (COMPONENTE Q8)
 function setupMultiselect() {
     const trigger = document.getElementById('multiselect-trigger');
     const dropdown = document.getElementById('multiselect-dropdown');
@@ -339,13 +336,14 @@ function setupMultiselect() {
     }
 }
 
-// Setup Potenza Multiselect (mantido)
+// Setup Potenza Multiselect (AGORA IDÊNTICO À Q8)
 function setupPotenzaMultiselect() {
     const trigger = document.getElementById('potenza-multiselect-trigger');
     const dropdown = document.getElementById('potenza-multiselect-dropdown');
     const options = document.querySelectorAll('#potenza-multiselect-options .multiselect-option');
     const selectedValues = formData.produtosPotenzaInteresse || [];
         
+    // Lógica de Abertura/Fecho Idêntica à Q8
     if (trigger && dropdown) {
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -353,12 +351,14 @@ function setupPotenzaMultiselect() {
         });
                 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#potenza-multiselect')) {
+            // Usa o ID específico do container Potenza
+            if (!e.target.closest('#potenza-multiselect-container')) { 
                 dropdown.classList.remove('open');
             }
         });
     }
         
+    // Lógica de Seleção/Remoção Idêntica à Q8 (com UX de sumir)
     options.forEach(option => {
         const value = option.dataset.value;
         const isSelected = selectedValues.includes(value);
@@ -386,9 +386,28 @@ function setupPotenzaMultiselect() {
             }
             
             isMultiselectOpen = true; 
-            renderQuestion(currentStep);
+            renderQuestion(currentStep); // Re-renderiza para atualizar a lista e o estado
         });
     });
+
+    // Lógica de Busca (Search)
+    const search = document.getElementById('potenza-multiselect-search');
+    if (search) {
+        search.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                const value = option.dataset.value;
+                const isSelected = selectedValues.includes(value);
+
+                if (!isSelected && text.includes(searchTerm)) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+    }
 }
 // --- FIM Funções Críticas de Setup ---
 
@@ -864,7 +883,7 @@ function renderCheckboxWithMultiselect(question) {
         if (opt.hasMultiselect && opt.value) {
             const show = checked ? 'show' : '';
             html += `<div class="conditional-input ${show}" id="potenza-multiselect">`;
-            html += renderPotenzaMultiselect();
+            html += renderPotenzaMultiselect(); // Chama a função que renderiza o novo Multiselect
             html += '</div>';
         }
     });
@@ -872,21 +891,27 @@ function renderCheckboxWithMultiselect(question) {
     return html;
 }
 
+// APLICANDO O MODELO DO MULTISELECT DA Q8 NA Q8.4
 function renderPotenzaMultiselect() {
+    const products = PRODUCTS.potenza; // Apenas produtos Potenza
     const selected = formData.produtosPotenzaInteresse || [];
-        
+
+    // Estrutura do Multiselect (IDÊNTICA à renderMultiselect)
     let html = `
         <p style="margin: 16px 0 12px; font-weight: 600;">Quais produtos gostaria de conhecer?</p>
-        <div class="multiselect-container">
+        <div class="multiselect-container" id="potenza-multiselect-container">
             <div class="multiselect-trigger" id="potenza-multiselect-trigger">
-                <span>Selecione os produtos</span>
+                <span>Pesquise pelo nome ou selecione na lista</span>
                 <span>▼</span>
             </div>
             <div class="multiselect-dropdown" id="potenza-multiselect-dropdown">
+                <div class="multiselect-search">
+                    <input type="text" id="potenza-multiselect-search" placeholder="Pesquisar produto...">
+                </div>
                 <div class="multiselect-options" id="potenza-multiselect-options">
     `;
         
-    PRODUCTS.potenza.forEach(product => {
+    products.forEach(product => {
         const isSelected = selected.includes(product);
         const displayStyle = isSelected ? 'display: none;' : 'display: flex;'; 
         
