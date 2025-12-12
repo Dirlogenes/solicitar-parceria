@@ -2,7 +2,7 @@
 const RD_CONFIG = {
     // Seu Token Público (MANTIDO)
     token: 'b32e0b962e0ec0de400f8215112b8a08', 
-    // Identificador genérico para evitar colisão com ativos internos do RD (CORRIGIDO)
+    // Identificador genérico para evitar colisão com ativos internos do RD
     eventId: 'solicitacao-parceria-phs-externo' 
 };
 
@@ -46,6 +46,7 @@ const PRODUCTS = {
 };
 
 // Form State
+// Mantive os nomes dos campos originais e adicionamos as chaves RD
 let formData = {
     name: '',
     email: '',
@@ -292,29 +293,24 @@ function getQuestionTitle(question) {
 function shouldShowQuestion(question) {
     switch (question.id) {
         case 'q8':
-            // Show if brands were selected and not just 'nao-utilizei'
             const selectedBrands = formData.marcas.length > 0;
             const onlyNaoUtilizei = formData.marcas.length === 1 && formData.marcas.includes('nao-utilizei');
             return selectedBrands;
                 
         case 'q8.3':
         case 'q8.4':
-            // Show if Potenza was NOT selected OR if 'nao-utilizei' was selected AND no Potenza products were picked in Q8
             const selectedPotenza = formData.marcas.includes('potenza');
             const selectedNaoUtilizei = formData.marcas.includes('nao-utilizei');
             const selectedPotenzaProducts = formData.produtos.some(p => 
                 PRODUCTS.potenza.includes(p)
             );
             
-            // Show Q8.3/Q8.4 if user didn't select Potenza brand OR if they selected 'nao-utilizei' and skipped Potenza products in Q8
             return !selectedPotenza || (selectedNaoUtilizei && !selectedPotenzaProducts);
                 
         case 'q10':
-            // Don't show if selected "nenhuma" partnership
             return !formData.parceriasAtivas.includes('nenhuma');
                 
         case 'q11':
-            // Only show if selected "cursos" in partnership type
             return formData.tiposParceria.includes('cursos');
                 
         default:
@@ -447,12 +443,13 @@ function renderMultiselect(question) {
     `;
         
     selected.forEach(product => {
-        html += `
-            <div class="selected-item">
-                ${product}
-                <button type="button" onclick="removeProduct('${product}')">×</button>
-            </div>
+        const item = document.createElement('div');
+        item.className = 'selected-item';
+        item.innerHTML = `
+            ${product}
+            <button type="button" onclick="removeProduct('${product}')">×</button>
         `;
+        container.appendChild(item); // BUG FIX: Use container.appendChild
     });
         
     html += `
@@ -570,6 +567,7 @@ function renderPotenzaMultiselect() {
             ${product}
             <button type="button" onclick="removePotenzaProduct('${product}')">×</button>
         `;
+        container.appendChild(item); // BUG FIX: Use container.appendChild
     });
         
     html += '</div></div>';
@@ -1368,7 +1366,6 @@ function updateProgress() {
     // Encontrar o índice da etapa atual entre as perguntas visíveis
     const visibleIndex = visibleQuestions.findIndex(q => q.id === questions[currentStep].id);
     
-    // Se não encontrou a pergunta atual nas visíveis, usa o índice normal
     const currentVisibleStep = visibleIndex !== -1 ? visibleIndex + 1 : currentStep + 1;
     
     const progress = (currentVisibleStep / totalSteps) * 100;
@@ -1382,7 +1379,6 @@ function updateNavigation() {
         
     prevBtn.style.display = currentStep > 0 ? 'flex' : 'none';
         
-    // Calcula o último passo visível
     const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
     const isLastStep = questions[currentStep].id === visibleQuestions[visibleQuestions.length - 1].id;
     
@@ -1393,187 +1389,185 @@ function updateNavigation() {
     }
 }
 
-// Build concatenated text for RD - OTIMIZADO PARA MÁXIMA LEITURA E ESTRUTURA
-function buildConcatenatedText() {
+// ==========================================================
+// FUNÇÕES DE FORMATAÇÃO DE DADOS (NOVO MÉTODO)
+// ==========================================================
+
+// Função de Formatação: cf_tipo_de_parceria
+function formatTiposParceria() {
+    if (formData.tiposParceria.length === 0) return '';
+    const tipos = formData.tiposParceria.map(t => {
+        if (t === 'conteudos') return 'Conteúdos para redes sociais';
+        if (t === 'cursos') return 'Cursos, treinamentos e/ou Hands-on';
+        return t;
+    }).join(', ');
+    return tipos;
+}
+
+// Função de Formatação: cf_qual_marca_utiliza
+function formatMarcas() {
+    if (formData.marcas.length === 0) return '';
+    const marcas = formData.marcas.map(m => {
+        if (m === 'tokuyama') return 'Tokuyama';
+        if (m === 'potenza') return 'Potenza';
+        if (m === 'nictone') return 'Nic Tone';
+        if (m === 'nao-utilizei') return 'Ainda não utilizei';
+        return m;
+    }).join(', ');
+    return marcas;
+}
+
+// Função de Formatação: cf_conhecimento_dominio_e_pratica_com_produtos
+function formatProdutos() {
+    // Separa produtos por quebra de linha (novo requisito)
+    return formData.produtos.length > 0 ? formData.produtos.join('\n') : '';
+}
+
+// Função de Formatação: cf_motivo_de_nao_ter_testado_potenza
+function formatMotivoPotenza() {
+    if (!shouldShowQuestion({ id: 'q8.3' }) || !formData.motivoPotenza) return '';
+
+    let motivo = formData.motivoPotenza;
+    if (motivo === 'sem-oportunidade') motivo = 'Ainda não tive oportunidade de testar';
+    else if (motivo === 'outras-marcas') motivo = 'Utilizo outras marcas';
+    else if (motivo === 'testei') motivo = 'Testei e não me adaptei';
+    else if (motivo === 'outro' && formData.motivoPotenzaOutro) motivo = formData.motivoPotenzaOutro;
+    
+    return motivo;
+}
+
+// Função de Formatação: cf_interesse_em_potenza
+function formatInteressePotenza() {
+    if (!shouldShowQuestion({ id: 'q8.4' }) || formData.interessePotenza === undefined || formData.interessePotenza === null) {
+        return '';
+    }
+
+    const interesse = formData.interessePotencia ? 'Sim' : 'Não';
+    let output = `Interesse em testar: ${interesse}`;
+
+    if (formData.interessePotenza && formData.produtosPotenzaInteresse && formData.produtosPotenzaInteresse.length > 0) {
+        output += `: ${formData.produtosPotenzaInteresse.join(', ')}`;
+    }
+    return output;
+}
+
+// Função de Formatação: cf_tem_parcerias_ativas
+function formatParceriasAtivas() {
+    let output = [];
+    const parcerias = formData.parceriasAtivas;
+
+    if (parcerias.includes('nenhuma')) {
+        return 'Não possuo parcerias ativas';
+    }
+
+    // Dentais
+    if (parcerias.includes('dentais') && formData.parceriasOdonto) {
+        output.push(`Dentais: ${formData.parceriasOdonto}`);
+    }
+
+    // Empresas
+    if (parcerias.includes('empresas') && formData.parceriasEmpresas) {
+        output.push(`Empresas: ${formData.parceriasEmpresas}`);
+    }
+
+    // Se houver texto de parcerias, adiciona o status de exclusividade no final
+    if (output.length > 0) {
+        output = output.join(' | ');
+
+        // Exclusividade
+        if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined) {
+            output += ` | Exclusividade: ${formData.exclusividade ? 'Sim' : 'Não'}`;
+            if (formData.exclusividade && formData.exclusividadeLista) {
+                output += ` com: ${formData.exclusividadeLista}`;
+            }
+        }
+    }
+
+    return output;
+}
+
+
+// Função de Formatação: cf_tipos_de_cursos_e_treinamentos
+function formatCursos() {
+    if (!formData.tiposParceria.includes('cursos') || formData.cursos.length === 0) {
+        return '';
+    }
+
     let text = [];
+    text.push(`[CURSO: Total Cadastrados]: ${formData.cursos.length}`);
     
-    // ==========================================================
-    // SEÇÃO 1: INFORMAÇÕES BÁSICAS
-    // ==========================================================
-    text.push('==================== DADOS BÁSICOS ====================');
-
-    // Instagram
-    if (formData.instagram) {
-        text.push(`[INFO: Instagram]: @${formData.instagram}`);
-    }
-
-    // Tipos de parceria
-    if (formData.tiposParceria.length > 0) {
-        const tipos = formData.tiposParceria.map(t => {
-            if (t === 'conteudos') return 'Conteúdos para redes sociais';
-            if (t === 'cursos') return 'Cursos, treinamentos e/ou Hands-on';
-            return t;
-        }).join(' | ');
-        text.push(`[INFO: Tipo de Parceria]: ${tipos}`);
-    }
-    
-    // ==========================================================
-    // SEÇÃO 2: EXPERIÊNCIA E PRODUTOS
-    // ==========================================================
-    text.push('\n=================== MARCAS E PRODUTOS ===================');
-
-    // Marcas utilizadas
-    if (formData.marcas.length > 0) {
-        const marcas = formData.marcas.map(m => {
-            if (m === 'tokuyama') return 'Tokuyama';
-            if (m === 'potenza') return 'Potenza';
-            if (m === 'nictone') return 'Nic Tone';
-            if (m === 'nao-utilizei') return 'Ainda não utilizei';
-            return m;
-        }).join(' | ');
-        text.push(`[PRODUTO: Marcas Utilizadas]: ${marcas}`);
-    }
-
-    // Produtos
-    if (formData.produtos.length > 0) {
-        const usedBrands = formData.marcas.includes('nao-utilizei');
-        const questionType = usedBrands ? 'Produtos de Interesse' : 'Produtos de Domínio';
-        text.push(`[PRODUTO: ${questionType}]: ${formData.produtos.join(' | ')}`);
-    }
-
-    // Motivo Potenza
-    if (shouldShowQuestion({ id: 'q8.3' }) && formData.motivoPotenza) {
-        let motivo = formData.motivoPotenza;
-        if (motivo === 'sem-oportunidade') motivo = 'Ainda não tive oportunidade de testar';
-        if (motivo === 'outras-marcas') motivo = 'Utilizo outras marcas';
-        if (motivo === 'testei') motivo = 'Testei e não me adaptei';
-        if (motivo === 'outro' && formData.motivoPotenzaOutro) motivo = formData.motivoPotenzaOutro;
+    formData.cursos.forEach((course, index) => {
+        // Separador visual de curso, com quebra de linha
+        text.push(`\n--- CURSO ${index + 1}: ${course.nome || 'Sem Nome'} ---`);
         
-        text.push(`[PRODUTO: Motivo não usar Potenza]: ${motivo}`);
-    }
+        const tipos = course.tipos.map(t => {
+            let label = '';
+            if (t === 'teorico') label = 'Teórico';
+            else if (t === 'pratico') label = 'Prático';
+            else if (t === 'handson') label = 'Hands-on';
+            else if (t === 'cursovip') label = 'Curso Vip';
+            else if (t === 'posgraduacao') label = 'Pós-graduação';
+            else if (t === 'imersao') label = 'Imersão';
+            else if (t === 'outro' && course.tipoOutro) label = `Outro: ${course.tipoOutro}`;
+            return label;
+        }).filter(l => l).join(', '); // Filtra vazios e junta
 
-    // Interesse em Potenza
-    if (shouldShowQuestion({ id: 'q8.4' }) && formData.interessePotenza !== undefined && formData.interessePotenza !== null) {
-        const interesse = formData.interessePotenza ? 'Sim' : 'Não';
-        text.push(`[PRODUTO: Interesse em testar Potenza]: ${interesse}`);
+        text.push(`- Tipo: ${tipos}`);
+        text.push(`- Regiões: ${course.regioes}`);
         
-        if (formData.interessePotenza && formData.produtosPotenzaInteresse && formData.produtosPotenzaInteresse.length > 0) {
-            text.push(`[PRODUTO: Potenza de interesse]: ${formData.produtosPotenzaInteresse.join(' | ')}`);
+        const freq = course.frequencia === 'fixas' ? 'Datas fixas e definidas com antecedência' : 'De acordo com demanda';
+        text.push(`- Frequência: ${freq}`);
+        
+        text.push(`- Duração: ${course.duracao}`);
+        text.push(`- Média de alunos: ${course.mediaAlunos}`);
+        
+        if (course.linkDivulgacao) {
+            text.push(`- Link Divulgação: ${course.linkDivulgacao}`);
         }
-    }
-    
-    // ==========================================================
-    // SEÇÃO 3: PARCERIAS ATIVAS
-    // ==========================================================
-    text.push('\n================== PARCERIAS ATIVAS ===================');
-
-    // Parcerias ativas
-    if (formData.parceriasAtivas.length > 0) {
-        const parcerias = formData.parceriasAtivas.map(p => {
-            if (p === 'dentais') {
-                let label = 'Tem parceria com Dentais';
-                if (formData.parceriasOdonto) label += `: ${formData.parceriasOdonto}`;
-                return label;
-            }
-            if (p === 'empresas') {
-                let label = 'Tem parcerias com outras empresas';
-                if (formData.parceriasEmpresas) label += `: ${formData.parceriasEmpresas}`;
-                return label;
-            }
-            if (p === 'nenhuma') return 'Não possui parcerias ativas';
-            return p;
-        }).join(' | ');
-        text.push(`[PARCERIA: Status Geral]: ${parcerias}`);
-    }
-
-    // Exclusividade
-    if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined && formData.exclusividade !== null) {
-        const excl = formData.exclusividade ? 'Sim' : 'Não';
-        text.push(`[PARCERIA: Exclusividade]: ${excl}`);
         
-        if (formData.exclusividade && formData.exclusividadeLista) {
-            text.push(`[PARCERIA: Detalhes Exclusividade]: ${formData.exclusividadeLista}`);
+        if (course.linkConteudo) {
+            text.push(`- Link Conteúdo: ${course.linkConteudo}`);
         }
-    }
+    });
 
-    // ==========================================================
-    // SEÇÃO 4: CURSOS
-    // ==========================================================
-    if (formData.tiposParceria.includes('cursos') && formData.cursos.length > 0) {
-        text.push('\n======================== CURSOS ========================');
-        text.push(`[CURSO: Total Cadastrados]: ${formData.cursos.length}`);
-        
-        formData.cursos.forEach((course, index) => {
-            // -- Início de cada curso com mais quebra de linha --
-            text.push(`\n\n--- CURSO ${index + 1}: ${course.nome || 'Sem Nome'} ---`);
-            
-            const tipos = course.tipos.map(t => {
-                let label = '';
-                if (t === 'teorico') label = 'Teórico';
-                else if (t === 'pratico') label = 'Prático';
-                else if (t === 'handson') label = 'Hands-on';
-                else if (t === 'cursovip') label = 'Curso Vip';
-                else if (t === 'posgraduacao') label = 'Pós-graduação';
-                else if (t === 'imersao') label = 'Imersão';
-                else if (t === 'outro' && course.tipoOutro) label = `Outro: ${course.tipoOutro}`;
-                return label;
-            }).filter(l => l).join(', ');
-
-            text.push(`- Tipo: ${tipos}`);
-            text.push(`- Regiões: ${course.regioes}`);
-            
-            const freq = course.frequencia === 'fixas' ? 'Datas fixas e definidas com antecedência' : 'De acordo com demanda';
-            text.push(`- Frequência: ${freq}`);
-            
-            text.push(`- Duração: ${course.duracao}`);
-            text.push(`- Média de alunos: ${course.mediaAlunos}`);
-            
-            if (course.linkDivulgacao) {
-                text.push(`- Link Divulgação: ${course.linkDivulgacao}`);
-            }
-            
-            if (course.linkConteudo) {
-                text.push(`- Link Conteúdo: ${course.linkConteudo}`);
-            }
-        });
-    }
-    
-    return text.join('\n'); 
+    return text.join('\n'); // Mantemos o \n para o RD Station
 }
 
-// Função auxiliar para mostrar a tela de sucesso
-function showSuccess() {
-    document.getElementById('loadingSpinner').style.display = 'none';
-    document.querySelector('.container').style.display = 'none';
-    document.querySelector('.navigation').style.display = 'none';
-    document.getElementById('successMessage').style.display = 'flex';
-}
 
-// Submit form to RD Station (COM IDENTIFICADOR GENÉRICO E ENDPOINT 1.3)
+// Submit form to RD Station (MÉTODO COM CAMPOS SEPARADOS)
 async function submitForm() {
     document.getElementById('loadingSpinner').style.display = 'flex';
     
-    // 1. Prepara o Payload completo
+    // 1. Mapeamento Direto para os IDs do RD Station
     const payload = {
         token_rdstation: RD_CONFIG.token, 
         identificador: RD_CONFIG.eventId, 
         email: formData.email,
         name: formData.name,
-        // Usando mobile_phone para mapeamento padrão de telefone
         mobile_phone: formData.cf_telefone_whatsapp,
         
-        // Campos personalizados (certifique-se que o nome é EXATO no RD Station)
+        // Campos Personalizados Mapeados
         cf_telefone_whatsapp: formData.cf_telefone_whatsapp,
         cf_cidade_uf: formData.cf_cidade_uf,
-        cf_instagram_usuario: formData.instagram,
-        cf_objetivos_e_contexto_da_parceria: buildConcatenatedText()
+        
+        // Mapeamentos de Resposta Formatados
+        cf_instagram: formData.instagram,
+        cf_tipo_de_parceria: formatTiposParceria(),
+        cf_qual_marca_utiliza: formatMarcas(),
+        cf_conhecimento_dominio_e_pratica_com_produtos: formatProdutos(),
+        cf_motivo_de_nao_ter_testado_potenza: formatMotivoPotenza(),
+        cf_interesse_em_potenza: formatInteressePotenza(),
+        cf_tem_parcerias_ativas: formatParceriasAtivas(),
+        cf_tipos_de_cursos_e_treinamentos: formatCursos()
     };
 
     try {
-        // 2. Simula o envio via Form Data (usando URLSearchParams para formato x-www-form-urlencoded)
+        // 2. Simula o envio via Form Data (Endpoint 1.3)
         const formParams = new URLSearchParams();
         for (const key in payload) {
-            formParams.append(key, payload[key]);
+            if (payload[key]) { // Ignora campos vazios
+                formParams.append(key, payload[key]);
+            }
         }
 
         // Endpoint de conversão de formulário 1.3 (funciona bem com CORS de terceiros)
@@ -1590,7 +1584,14 @@ async function submitForm() {
 
     } catch (error) {
         console.error('Erro no envio (possivelmente falha de rede ou CORS):', error);
-        // Mesmo em caso de erro no fetch (devido a CORS ou rede), mostra sucesso para o usuário.
         showSuccess(); 
     }
+}
+
+// Função auxiliar para mostrar a tela de sucesso
+function showSuccess() {
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.querySelector('.container').style.display = 'none';
+    document.querySelector('.navigation').style.display = 'none';
+    document.getElementById('successMessage').style.display = 'flex';
 }
