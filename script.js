@@ -1,7 +1,7 @@
 // Configuration
 const RD_CONFIG = {
     token: 'b32e0b962e0ec0de400f8215112b8a08', 
-    eventId: 'solicitar-parceria' 
+    eventId: 'solicitacao-parceria-phs-externo' 
 };
 
 // --- Dados de Autocomplete ---
@@ -956,7 +956,7 @@ function renderRadioWithInput(question) {
             html += `
                 <div class="conditional-input ${show}" id="input-exclusividade">
                     <p style="margin: 8px 0; font-size: 14px; color: var(--text-secondary);">${opt.inputLabel}</p>
-                    <input type="text" id="exclusividadeLista" value="${formData.exclusividadeLista || ''}" placeholder="Liste aqui...">
+                    <input type="text" id="exclusividadeLista" value="${formData[question.field] || ''}" placeholder="Liste aqui...">
                 </div>
             `;
         }
