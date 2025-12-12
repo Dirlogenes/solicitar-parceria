@@ -19,7 +19,8 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* FUNDO BRANCO COMPLETO para Embed */
+    background: var(--surface); 
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -35,13 +36,14 @@ body {
 }
 
 /* Progress Bar */
+/* Mantive o estilo de contraste do progress bar */
 .progress-container {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-color);
     border-radius: 10px;
     height: 8px;
     margin-bottom: 40px;
     overflow: hidden;
-    backdrop-filter: blur(10px);
+    /* Remover blur, se o fundo é branco */
 }
 
 .progress-bar {
@@ -52,14 +54,17 @@ body {
     width: 0%;
 }
 
-/* Form Wrapper */
+/* Form Wrapper (Com destaque e sombra para parecer um elemento DENTRO do RD) */
 .form-wrapper {
     background: var(--surface);
     border-radius: 20px;
     padding: 60px 50px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    /* Sombra mais suave para destaque */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1); 
     min-height: 450px;
     margin-bottom: 30px;
+    /* Garantir que o formulário está visível mesmo com fundo branco */
+    border: 1px solid var(--border-color); 
 }
 
 /* Question Styles */
@@ -109,11 +114,13 @@ body {
 /* Input Styles */
 .input-group {
     margin-bottom: 20px;
+    position: relative; /* Necessário para posicionar o autocompletar */
 }
 
 input[type="text"],
 input[type="email"],
 input[type="url"],
+input[type="tel"], /* Incluindo TEL para garantir o mesmo layout */
 textarea,
 select {
     width: 100%;
@@ -130,6 +137,7 @@ select {
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="url"]:focus,
+input[type="tel"]:focus, /* Incluindo TEL */
 textarea:focus,
 select:focus {
     outline: none;
@@ -139,7 +147,7 @@ select:focus {
 
 input.error,
 textarea.error {
-    border-color: var(--error-color);
+    border-color: var(--error-color) !important; /* !important para sobrepor o foco */
 }
 
 .error-message {
@@ -165,6 +173,40 @@ textarea.error {
         transform: translateX(5px);
     }
 }
+
+/* --- AUTOCOMPLETE LIST STYLES --- */
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.autocomplete-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+.autocomplete-item.active,
+.autocomplete-item:hover {
+    background: var(--primary-color);
+    color: white;
+}
+/* --- END AUTOCOMPLETE LIST STYLES --- */
+
+
+/* Checkbox and Radio Styles (restante do CSS omitido por ser igual) */
 
 /* Checkbox and Radio Styles */
 .checkbox-group,
@@ -376,17 +418,39 @@ textarea.error {
     background: #F9FAFB;
 }
 
+.course-item.closed {
+    padding: 20px;
+}
+
 .course-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    cursor: pointer; /* Adicionado cursor para indicar que pode ser clicado */
+}
+
+.course-header.closed {
+    margin-bottom: 0;
 }
 
 .course-title {
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);
+}
+
+.course-content {
+    /* Container para o conteúdo que será escondido */
+    transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
+    overflow: hidden;
+}
+
+.course-content.closed {
+    max-height: 0 !important;
+    opacity: 0;
+    padding-top: 0;
+    margin-top: 0;
 }
 
 .remove-course {
@@ -479,13 +543,14 @@ textarea.error {
 }
 
 /* Success Message */
+/* (Estilo de Success e Loading mantidos, mas com fundo branco) */
 .success-container {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--surface); /* Fundo branco para embed */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -559,7 +624,7 @@ textarea.error {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 255, 255, 0.8); /* Fundo branco semi-transparente */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -570,8 +635,8 @@ textarea.error {
 .spinner {
     width: 50px;
     height: 50px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -583,7 +648,7 @@ textarea.error {
 }
 
 .loading-spinner p {
-    color: white;
+    color: var(--text-primary);
     margin-top: 20px;
     font-size: 16px;
 }
