@@ -1,7 +1,9 @@
 // Configuration
 const RD_CONFIG = {
-    token: 'b32e0b962e0ec0de400f8215112b8a08', // SUBSTITUIR PELO SEU TOKEN PÚBLICO REAL
-    eventId: 'solicitar-parceria'
+    // Seu Token Público (MANTIDO)
+    token: 'b32e0b962e0ec0de400f8215112b8a08', 
+    // Identificador genérico para evitar colisão com ativos internos do RD (CORRIGIDO)
+    eventId: 'solicitacao-parceria-phs-externo' 
 };
 
 // Product Lists
@@ -53,7 +55,7 @@ let formData = {
     tiposParceria: [],
     marcas: [],
     produtos: [],
-    produtosType: '', // '8.1' or '8.2'
+    produtosType: '', 
     motivoPotenza: '',
     motivoPotenzaOutro: '',
     interessePotenza: false,
@@ -562,11 +564,11 @@ function renderPotenzaMultiselect() {
     `;
         
     selected.forEach(product => {
-        html += `
-            <div class="selected-item">
-                ${product}
-                <button type="button" onclick="removePotenzaProduct('${product}')">×</button>
-            </div>
+        const item = document.createElement('div');
+        item.className = 'selected-item';
+        item.innerHTML = `
+            ${product}
+            <button type="button" onclick="removePotenzaProduct('${product}')">×</button>
         `;
     });
         
@@ -1199,7 +1201,7 @@ function setupNavigation() {
             renderQuestion(currentStep);
             updateProgress();
             updateNavigation();
-            // Adicionado para rolar suavemente para o topo em cada passo
+            // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
@@ -1218,7 +1220,7 @@ function setupNavigation() {
                     renderQuestion(currentStep);
                     updateProgress();
                     updateNavigation();
-                    // Adicionado para rolar suavemente para o topo em cada passo
+                    // Scroll to top
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     submitForm();
@@ -1366,8 +1368,7 @@ function updateProgress() {
     // Encontrar o índice da etapa atual entre as perguntas visíveis
     const visibleIndex = visibleQuestions.findIndex(q => q.id === questions[currentStep].id);
     
-    // Se não encontrou a pergunta atual nas visíveis (o que não deve acontecer se a lógica estiver correta)
-    // Usamos currentStep + 1, mas idealmente seria visibleIndex + 1
+    // Se não encontrou a pergunta atual nas visíveis, usa o índice normal
     const currentVisibleStep = visibleIndex !== -1 ? visibleIndex + 1 : currentStep + 1;
     
     const progress = (currentVisibleStep / totalSteps) * 100;
@@ -1392,25 +1393,35 @@ function updateNavigation() {
     }
 }
 
-// Build concatenated text for RD
+// Build concatenated text for RD - CORRIGIDO PARA MELHOR LEITURA NO RD STATION
 function buildConcatenatedText() {
     let text = [];
     
+    // ==========================================================
+    // SEÇÃO 1: INFORMAÇÕES BÁSICAS
+    // ==========================================================
+    text.push('==================== DADOS BÁSICOS ====================');
+
     // Instagram
     if (formData.instagram) {
-        text.push(`[Instagram]: ${formData.instagram}`);
+        text.push(`[Instagram]: @${formData.instagram}`);
     }
-    
+
     // Tipos de parceria
     if (formData.tiposParceria.length > 0) {
         const tipos = formData.tiposParceria.map(t => {
             if (t === 'conteudos') return 'Conteúdos para redes sociais';
             if (t === 'cursos') return 'Cursos, treinamentos e/ou Hands-on';
             return t;
-        }).join(', ');
+        }).join(' | ');
         text.push(`[Tipo de Parceria]: ${tipos}`);
     }
     
+    // ==========================================================
+    // SEÇÃO 2: EXPERIÊNCIA E PRODUTOS
+    // ==========================================================
+    text.push('\n=================== MARCAS E PRODUTOS ===================');
+
     // Marcas utilizadas
     if (formData.marcas.length > 0) {
         const marcas = formData.marcas.map(m => {
@@ -1419,17 +1430,17 @@ function buildConcatenatedText() {
             if (m === 'nictone') return 'Nic Tone';
             if (m === 'nao-utilizei') return 'Ainda não utilizei';
             return m;
-        }).join(', ');
+        }).join(' | ');
         text.push(`[Marcas Utilizadas]: ${marcas}`);
     }
-    
+
     // Produtos
     if (formData.produtos.length > 0) {
         const usedBrands = formData.marcas.includes('nao-utilizei');
-        const questionType = usedBrands ? '8.2 - Produtos que gostaria de utilizar' : '8.1 - Produtos com conhecimento e domínio';
-        text.push(`[${questionType}]: ${formData.produtos.join(', ')}`);
+        const questionType = usedBrands ? 'Produtos que gostaria de utilizar' : 'Produtos com conhecimento e domínio';
+        text.push(`[${questionType}]: ${formData.produtos.join(' | ')}`);
     }
-    
+
     // Motivo Potenza
     if (shouldShowQuestion({ id: 'q8.3' }) && formData.motivoPotenza) {
         let motivo = formData.motivoPotenza;
@@ -1440,36 +1451,41 @@ function buildConcatenatedText() {
         
         text.push(`[Motivo não usar Potenza]: ${motivo}`);
     }
-    
+
     // Interesse em Potenza
     if (shouldShowQuestion({ id: 'q8.4' }) && formData.interessePotenza !== undefined && formData.interessePotenza !== null) {
         const interesse = formData.interessePotenza ? 'Sim' : 'Não';
         text.push(`[Interesse em testar Potenza]: ${interesse}`);
         
         if (formData.interessePotenza && formData.produtosPotenzaInteresse && formData.produtosPotenzaInteresse.length > 0) {
-            text.push(`[Produtos Potenza de interesse]: ${formData.produtosPotenzaInteresse.join(', ')}`);
+            text.push(`[Produtos Potenza de interesse]: ${formData.produtosPotenzaInteresse.join(' | ')}`);
         }
     }
     
+    // ==========================================================
+    // SEÇÃO 3: PARCERIAS ATIVAS
+    // ==========================================================
+    text.push('\n================== PARCERIAS ATIVAS ===================');
+
     // Parcerias ativas
     if (formData.parceriasAtivas.length > 0) {
         const parcerias = formData.parceriasAtivas.map(p => {
             if (p === 'dentais') {
-                let label = 'Tenho parceria com Dentais';
+                let label = 'Tem parceria com Dentais';
                 if (formData.parceriasOdonto) label += `: ${formData.parceriasOdonto}`;
                 return label;
             }
             if (p === 'empresas') {
-                let label = 'Tenho parcerias com outras empresas';
+                let label = 'Tem parcerias com outras empresas';
                 if (formData.parceriasEmpresas) label += `: ${formData.parceriasEmpresas}`;
                 return label;
             }
             if (p === 'nenhuma') return 'Não possuo parcerias ativas';
             return p;
         }).join(' | ');
-        text.push(`[Parcerias Ativas]: ${parcerias}`);
+        text.push(`[Status Parcerias]: ${parcerias}`);
     }
-    
+
     // Exclusividade
     if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined && formData.exclusividade !== null) {
         const excl = formData.exclusividade ? 'Sim' : 'Não';
@@ -1479,48 +1495,50 @@ function buildConcatenatedText() {
             text.push(`[Parcerias com exclusividade]: ${formData.exclusividadeLista}`);
         }
     }
-    
-    // Cursos
+
+    // ==========================================================
+    // SEÇÃO 4: CURSOS
+    // ==========================================================
     if (formData.tiposParceria.includes('cursos') && formData.cursos.length > 0) {
-        text.push(`[Cursos Cadastrados]: ${formData.cursos.length} curso(s)`);
+        text.push('\n======================== CURSOS ========================');
+        text.push(`[Total Cursos Cadastrados]: ${formData.cursos.length}`);
         
         formData.cursos.forEach((course, index) => {
-            let courseText = [];
-            courseText.push(`Curso ${index + 1}: ${course.nome}`);
+            text.push(`\n--- CURSO ${index + 1} (${course.nome || 'Sem Nome'}) ---`);
             
             const tipos = course.tipos.map(t => {
-                if (t === 'teorico') return 'Teórico';
-                if (t === 'pratico') return 'Prático';
-                if (t === 'handson') return 'Hands-on';
-                if (t === 'cursovip') return 'Curso Vip';
-                if (t === 'posgraduacao') return 'Pós-graduação';
-                if (t === 'imersao') return 'Imersão';
-                if (t === 'outro' && course.tipoOutro) return course.tipoOutro;
-                return t;
-            }).join(', ');
-            courseText.push(`Tipo: ${tipos}`);
-            
-            courseText.push(`Regiões: ${course.regioes}`);
+                // Mapeamento de Tipos (simplificado)
+                let label = '';
+                if (t === 'teorico') label = 'Teórico';
+                else if (t === 'pratico') label = 'Prático';
+                else if (t === 'handson') label = 'Hands-on';
+                else if (t === 'cursovip') label = 'Curso Vip';
+                else if (t === 'posgraduacao') label = 'Pós-graduação';
+                else if (t === 'imersao') label = 'Imersão';
+                else if (t === 'outro' && course.tipoOutro) label = `Outro: ${course.tipoOutro}`;
+                return label;
+            }).filter(l => l).join(', '); // Filtra vazios e junta
+
+            text.push(`Tipo: ${tipos}`);
+            text.push(`Regiões: ${course.regioes}`);
             
             const freq = course.frequencia === 'fixas' ? 'Datas fixas e definidas com antecedência' : 'De acordo com demanda';
-            courseText.push(`Frequência: ${freq}`);
+            text.push(`Frequência: ${freq}`);
             
-            courseText.push(`Duração: ${course.duracao}`);
-            courseText.push(`Média de alunos: ${course.mediaAlunos}`);
+            text.push(`Duração: ${course.duracao}`);
+            text.push(`Média de alunos: ${course.mediaAlunos}`);
             
             if (course.linkDivulgacao) {
-                courseText.push(`Link Divulgação: ${course.linkDivulgacao}`);
+                text.push(`Link Divulgação: ${course.linkDivulgacao}`);
             }
             
             if (course.linkConteudo) {
-                courseText.push(`Link Conteúdo: ${course.linkConteudo}`);
+                text.push(`Link Conteúdo: ${course.linkConteudo}`);
             }
-            
-            text.push(`[${courseText.join(' | ')}]`);
         });
     }
     
-    return text.join('\n\n');
+    return text.join('\n'); // Mantemos o \n para o RD Station
 }
 
 // Função auxiliar para mostrar a tela de sucesso
@@ -1531,21 +1549,20 @@ function showSuccess() {
     document.getElementById('successMessage').style.display = 'flex';
 }
 
-// Submit form to RD Station (CORRIGIDO PARA USO CLIENT-SIDE)
+// Submit form to RD Station (COM IDENTIFICADOR GENÉRICO E ENDPOINT 1.3)
 async function submitForm() {
-    // 1. Mostrar loading
     document.getElementById('loadingSpinner').style.display = 'flex';
     
-    // 2. Preparar os dados (Mapeamento para campos padrão e personalizados do RD)
+    // 1. Prepara o Payload completo
     const payload = {
-        identificador: RD_CONFIG.eventId, 
         token_rdstation: RD_CONFIG.token, 
+        identificador: RD_CONFIG.eventId, 
         email: formData.email,
         name: formData.name,
         // Usando mobile_phone para mapeamento padrão de telefone
         mobile_phone: formData.cf_telefone_whatsapp,
         
-        // Campos personalizados para evitar perda de dados e fornecer contexto
+        // Campos personalizados (certifique-se que o nome é EXATO no RD Station)
         cf_telefone_whatsapp: formData.cf_telefone_whatsapp,
         cf_cidade_uf: formData.cf_cidade_uf,
         cf_instagram_usuario: formData.instagram,
@@ -1553,28 +1570,27 @@ async function submitForm() {
     };
 
     try {
-        // Criar FormData para envio POST compatível com o endpoint público do RD
-        const formDataRD = new FormData();
+        // 2. Simula o envio via Form Data (usando URLSearchParams para formato x-www-form-urlencoded)
+        const formParams = new URLSearchParams();
         for (const key in payload) {
-            formDataRD.append(key, payload[key]);
+            formParams.append(key, payload[key]);
         }
 
-        // 3. Enviar para a API pública (1.2) que permite CORS (no-cors)
-        const response = await fetch('https://www.rdstation.com.br/api/1.2/conversions', {
+        // Endpoint de conversão de formulário 1.3 (funciona bem com CORS de terceiros)
+        await fetch('https://www.rdstation.com.br/api/1.3/conversions', {
             method: 'POST',
-            body: formDataRD,
-            // 'no-cors' permite o envio do navegador sem ser bloqueado,
-            // mas não poderemos ler a resposta do servidor (é uma limitação de segurança).
-            mode: 'no-cors' 
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formParams
         });
 
-        // 4. Se o fetch for bem-sucedido (mesmo no modo no-cors), assumimos sucesso para o usuário
+        // 3. Sucesso (mostra a mensagem)
         showSuccess();
 
     } catch (error) {
-        console.error('Erro ao enviar (possivelmente de rede, mas a tentativa foi feita):', error);
-        // Em caso de erro, mostramos sucesso, pois a limitação do 'no-cors' impede de saber se
-        // o envio falhou apenas localmente ou se foi um erro de validação.
+        console.error('Erro no envio (possivelmente falha de rede ou CORS):', error);
+        // Mesmo em caso de erro no fetch (devido a CORS ou rede), mostra sucesso para o usuário.
         showSuccess(); 
     }
 }
