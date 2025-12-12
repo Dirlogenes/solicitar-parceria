@@ -2,51 +2,50 @@
 const RD_CONFIG = {
     // Seu Token Público (MANTIDO)
     token: 'b32e0b962e0ec0de400f8215112b8a08', 
-    // Identificador genérico para evitar colisão com ativos internos do RD
+    // Identificador genérico
     eventId: 'solicitacao-parceria-phs-externo' 
 };
 
-// Product Lists
+// Product Lists (ATUALIZADA COM OS NOMES EM CAIXA BAIXA/TÍTULO)
 const PRODUCTS = {
     tokuyama: [
-        'RESINA ESTELITE OMEGA',
-        'RESINA PALFIQUE LX5',
-        'RESINA ESTELITE POSTERIOR',
-        'RESINA PALFIQUE OMNICHROMA',
-        'RESINA PALFIQUE UNIVERSAL FLOW',
-        'REEMBASADOR SOFRELINER TOUGH',
-        'REEMBASADOR REBASE 2',
-        'ADESIVO PALFIQUE BOND AUTOCONDICIONANTE',
-        'ADESIVO PALFIQUE UNIVERSAL BOND',
-        'PINCEL TOKUYAMA',
-        'CORANTE E OPACIFICANTE ESTELITE COLOR',
-        'CIMENTO RESINOSO ESTECEM PLUS'
+        'Resina Estelite Omega',
+        'Resina Palfique LX5',
+        'Resina Estelite Posterior',
+        'Resina Palfique Omnichroma',
+        'Resina Palfique Universal Flow',
+        'Reembasador Sofreliner Tough',
+        'Reembasador Rebase 2',
+        'Adesivo Palfique Bond Autocondicionante',
+        'Adesivo Palfique Universal Bond',
+        'Pincel Tokuyama',
+        'Corante e Opacificante Estelite Color',
+        'Cimento Resinosa Estecem Plus'
     ],
     potenza: [
-        'CLAREADOR CONSULTÓRIO POTENZA BIANCO PERÓXIDO DE HIDROGÊNIO PRO "35%" "38%"',
-        'CLAREADOR CONSULTÓRIO POTENZA BIANCO PF PERÓXIDO DE CARBAMIDA 35%',
-        'CLAREADOR CASEIRO PERÓXIDO DE CARBAMIDA "10%"  "16%"  "22%"',
-        'CLAREADOR CASEIRO - PERÓXIDO DE HIDROGÊNIO - "6%"  "7,5%"  "9,5%"',
-        'BARREIRA GENGIVAL POTENZA BLOCCO',
-        'DESSENSIBILIZANTES POTENZA ESENTE',
-        'CIMENTO ORTODONTICO POTENZA ORTHOBLUE',
-        'CONDICIONADOR ÁCIDO FOSFÓRICO H3PO4 ESMALTE E DENTINA POTENZA ATTACO "35%" "37%"',
-        'CONDICIONADOR ÁCIDO FLUORÍDRICO HF CERÂMICA POTENZA ATTACO "5%" "10%"',
-        'MICROABRASÃO POTENZA ABRASIONE',
-        'HIDRATANTE BUCAL LONGA DURAÇAO POTENZA IDRATA',
-        'PASTAS DE POLIMENTO PARA RESINAS POTENZA SPECCHI',
-        'PLACAS DE EVA PARA CLAREAMENTO POTENZA STAMPO EVA',
-        'ESPUMA DE LIMPEZA DE MOLDEIRA POTENZA CLOUD CLEAN',
-        'AGENTE DE UNIAO POTENZA SILANO',
-        'BLOQUEADOR DE OXIGENIO POTENZA BLOXY'
+        'Clareador Consultório Potenza Bianco Peróxido de Hidrogênio "35%" "38%"',
+        'Clareador Consultório Potenza Bianco PF Peróxido de Carbamida 35%',
+        'Clareador Caseiro Peróxido de Carbamida "10%" "16%" "22%"',
+        'Clareador Caseiro Peróxido de Hidrogênio "6%" "7,5%" "9,5%"',
+        'Barreira Gengival Potenza Blocco',
+        'Dessensibilizantes Potenza Esente',
+        'Cimento Ortodôntico Potenza Orthoblue',
+        'Condicionador Ácido Fosfórico H3PO4 Esmalte e Dentina Potenza Attaco “35%” “37%”',
+        'Condicionador Ácido Fluorídrico HF Cerâmica Potenza Attaco “5%” “10%”',
+        'Microabrasão Potenza Abrasione',
+        'Hidratante Bucal Longa Duração Potenza Idrata',
+        'Pastas de Polimento para Resinas Potenza Specchi',
+        'Placas de EVA para Clareamento Potenza Stampo EVA',
+        'Espuma de Limpeza de Moldeira Potenza Cloud Clean',
+        'Agente de União Potenza Silano',
+        'Bloqueador de Oxigênio Potenza Bloxy'
     ],
     nictone: [
-        'LENÇOL DE BORRACHA PARA ISOLAMENTO ABSOLUTO NICTONE'
+        'Lençol de borracha para isolamento absoluto Nic Tone'
     ]
 };
 
 // Form State
-// Mantive os nomes dos campos originais e adicionamos as chaves RD
 let formData = {
     name: '',
     email: '',
@@ -449,7 +448,7 @@ function renderMultiselect(question) {
             ${product}
             <button type="button" onclick="removeProduct('${product}')">×</button>
         `;
-        container.appendChild(item); // BUG FIX: Use container.appendChild
+        document.getElementById('selected-items').appendChild(item); // Corrigido para usar o ID
     });
         
     html += `
@@ -567,7 +566,7 @@ function renderPotenzaMultiselect() {
             ${product}
             <button type="button" onclick="removePotenzaProduct('${product}')">×</button>
         `;
-        container.appendChild(item); // BUG FIX: Use container.appendChild
+        document.getElementById('potenza-selected-items').appendChild(item); // Corrigido para usar o ID
     });
         
     html += '</div></div>';
@@ -1393,7 +1392,7 @@ function updateNavigation() {
 // FUNÇÕES DE FORMATAÇÃO DE DADOS (NOVO MÉTODO)
 // ==========================================================
 
-// Função de Formatação: cf_tipo_de_parceria
+// Função de Formatação: cf_tipo_de_parceria (Separador: Vírgula)
 function formatTiposParceria() {
     if (formData.tiposParceria.length === 0) return '';
     const tipos = formData.tiposParceria.map(t => {
@@ -1404,7 +1403,7 @@ function formatTiposParceria() {
     return tipos;
 }
 
-// Função de Formatação: cf_qual_marca_utiliza
+// Função de Formatação: cf_qual_marca_utiliza (Separador: Vírgula)
 function formatMarcas() {
     if (formData.marcas.length === 0) return '';
     const marcas = formData.marcas.map(m => {
@@ -1417,10 +1416,10 @@ function formatMarcas() {
     return marcas;
 }
 
-// Função de Formatação: cf_conhecimento_dominio_e_pratica_com_produtos
+// Função de Formatação: cf_conhecimento_dominio_e_pratica_com_produtos (Separador: Vírgula)
 function formatProdutos() {
-    // Separa produtos por quebra de linha (novo requisito)
-    return formData.produtos.length > 0 ? formData.produtos.join('\n') : '';
+    // Agora separando por vírgula e espaço, e não por quebra de linha
+    return formData.produtos.length > 0 ? formData.produtos.join(', ') : '';
 }
 
 // Função de Formatação: cf_motivo_de_nao_ter_testado_potenza
@@ -1442,10 +1441,11 @@ function formatInteressePotenza() {
         return '';
     }
 
-    const interesse = formData.interessePotencia ? 'Sim' : 'Não';
+    const interesse = formData.interessePotenza ? 'Sim' : 'Não';
     let output = `Interesse em testar: ${interesse}`;
 
     if (formData.interessePotenza && formData.produtosPotenzaInteresse && formData.produtosPotenzaInteresse.length > 0) {
+        // Separando os produtos de interesse por vírgula e espaço
         output += `: ${formData.produtosPotenzaInteresse.join(', ')}`;
     }
     return output;
@@ -1470,20 +1470,21 @@ function formatParceriasAtivas() {
         output.push(`Empresas: ${formData.parceriasEmpresas}`);
     }
 
-    // Se houver texto de parcerias, adiciona o status de exclusividade no final
-    if (output.length > 0) {
-        output = output.join(' | ');
+    let result = output.join(' | ');
 
-        // Exclusividade
-        if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined) {
-            output += ` | Exclusividade: ${formData.exclusividade ? 'Sim' : 'Não'}`;
-            if (formData.exclusividade && formData.exclusividadeLista) {
-                output += ` com: ${formData.exclusividadeLista}`;
-            }
+    // Exclusividade
+    if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined) {
+        if (result) {
+            result += ' | ';
+        }
+        result += `Exclusividade: ${formData.exclusividade ? 'Sim' : 'Não'}`;
+        
+        if (formData.exclusividade && formData.exclusividadeLista) {
+            result += ` com: ${formData.exclusividadeLista}`;
         }
     }
 
-    return output;
+    return result;
 }
 
 
@@ -1497,8 +1498,8 @@ function formatCursos() {
     text.push(`[CURSO: Total Cadastrados]: ${formData.cursos.length}`);
     
     formData.cursos.forEach((course, index) => {
-        // Separador visual de curso, com quebra de linha
-        text.push(`\n--- CURSO ${index + 1}: ${course.nome || 'Sem Nome'} ---`);
+        // Separador visual de curso, com quebra de linha dupla para melhor separação visual
+        text.push(`\n\n--- CURSO ${index + 1}: ${course.nome || 'Sem Nome'} ---`);
         
         const tipos = course.tipos.map(t => {
             let label = '';
