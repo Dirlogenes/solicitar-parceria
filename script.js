@@ -1214,4 +1214,413 @@ function setupAutocomplete(question) {
         if (searchTerm.length < 2) return;
 
         const filteredOptions = options.filter(item => 
-            item.toLowerCase().includes(searchTerm.
+            item.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        filteredOptions.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = item;
+            div.addEventListener('click', () => selectItem(item));
+            listContainer.appendChild(div);
+        });
+    };
+
+    const selectItem = (value) => {
+        formData[question.field] = value;
+        input.value = value;
+        listContainer.innerHTML = '';
+        input.classList.remove('error');
+    };
+
+    input.addEventListener('input', (e) => {
+        formData[question.field] = e.target.value;
+        renderList(e.target.value);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.input-group') || e.target !== input) {
+            listContainer.innerHTML = '';
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const items = listContainer.querySelectorAll('.autocomplete-item');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeItem = (activeItem + 1) % items.length;
+            items.forEach((item, index) => {
+                item.classList.remove('active');
+                if (index === activeItem) item.classList.add('active');
+            });
+            if (items[activeItem]) items[activeItem].scrollIntoView({ block: 'nearest' });
+
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeItem = (activeItem - 1 + items.length) % items.length;
+            items.forEach((item, index) => {
+                item.classList.remove('active');
+                if (index === activeItem) item.classList.add('active');
+            });
+            if (items[activeItem]) items[activeItem].scrollIntoView({ block: 'nearest' });
+
+        } else if (e.key === 'Enter' && activeItem > -1) {
+            e.preventDefault();
+            selectItem(items[activeItem].textContent);
+        }
+    });
+}
+// --- FIM Lógica de Autocomplete ---
+
+
+// Setup navigation (Removido avanço por Enter)
+function setupNavigation() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const form = document.getElementById('phsForm');
+        
+    prevBtn.addEventListener('click', () => {
+        if (currentStep > 0) {
+            currentStep--;
+            renderQuestion(currentStep);
+            updateProgress();
+            updateNavigation();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+        
+    nextBtn.addEventListener('click', () => {
+        handleNextStep();
+    });
+    
+    // Opcional: Impedir que o ENTER envie o formulário em campos de texto simples
+     form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.type !== 'textarea') {
+            e.preventDefault(); 
+        }
+    });
+}
+
+// Função de avanço do passo (usada pelo clique)
+function handleNextStep() {
+     if (validateCurrentQuestion()) {
+        if (currentStep < questions.length - 1) {
+            currentStep++;
+            while (currentStep < questions.length && questions[currentStep].conditional && !shouldShowQuestion(questions[currentStep])) {
+                currentStep++;
+            }
+            if (currentStep < questions.length) {
+                renderQuestion(currentStep);
+                updateProgress();
+                updateNavigation();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                submitForm();
+            }
+        } else {
+            submitForm();
+        }
+    }
+}
+
+// Validate current question (Mantido)
+function validateCurrentQuestion() {
+    const question = questions[currentStep];
+    const errorDiv = document.getElementById(`error-${question.id}`);
+    let isValid = true;
+    const input = document.getElementById(question.field);
+        
+    errorDiv.classList.remove('show');
+    if (input) input.classList.remove('error');
+
+    switch (question.type) {
+        case 'text':
+        case 'email':
+        case 'tel':
+            if (!formData[question.field] || formData[question.field].trim() === '') {
+                isValid = false;
+                errorDiv.textContent = 'Este campo é obrigatório';
+            } else if (question.validation === 'email' && !isValidEmail(formData[question.field])) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, insira um e-mail válido';
+            } else if (question.validation === 'phone' && !isValidPhone(formData[question.field])) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, insira um telefone válido com DDD (Ex: 47998887777)';
+            }
+            break;
+                
+        case 'checkbox':
+        case 'checkbox-exclusive':
+            if (formData[question.field].length === 0) {
+                isValid = false;
+                errorDiv.textContent = 'Selecione ao menos uma opção';
+            }
+            break;
+                
+        case 'multiselect':
+            if (!formData.produtos || formData.produtos.length === 0) {
+                isValid = false;
+                errorDiv.textContent = 'Selecione ao menos um produto';
+            }
+            break;
+        
+        case 'radio-with-other':
+            if (!formData[question.field]) {
+                isValid = false;
+            } else if (formData[question.field] === 'outro' && (!formData.motivoPotenzaOutro || formData.motivoPotenzaOutro.trim() === '')) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, especifique o motivo';
+            }
+            break;
+                
+        case 'checkbox-with-multiselect':
+            // *CORRIGIDO AQUI*
+            const interesse = formData[question.field];
+            if (interesse === undefined || interesse === null) {
+                isValid = false;
+            } else if (interesse === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, selecione ao menos um produto';
+            }
+            break;
+                
+        case 'checkbox-with-inputs':
+            if (formData[question.field].length === 0) {
+                isValid = false;
+                errorDiv.textContent = 'Selecione ao menos uma opção';
+            } else {
+                const selected = formData[question.field];
+                if (selected.includes('dentais') && (!formData.parceriasOdonto || formData.parceriasOdonto.trim() === '')) {
+                    isValid = false;
+                    errorDiv.textContent = 'Por favor, liste suas dentais parceiras.';
+                } else if (selected.includes('empresas') && (!formData.parceriasEmpresas || formData.parceriasEmpresas.trim() === '')) {
+                    isValid = false;
+                    errorDiv.textContent = 'Por favor, liste as empresas parceiras.';
+                }
+            }
+            break;
+                
+        case 'radio-with-input':
+            if (formData[question.field] === undefined) {
+                isValid = false;
+            } else if (formData[question.field] === true && (!formData.exclusividadeLista || formData.exclusividadeLista.trim() === '')) {
+                isValid = false;
+                errorDiv.textContent = 'Por favor, liste as parcerias com exclusividade';
+            }
+            break;
+                
+        case 'course-repeater':
+            isValid = validateCourses();
+            if (!isValid) {
+                errorDiv.textContent = 'Por favor, preencha todos os campos obrigatórios dos cursos';
+            }
+            break;
+    }
+        
+    if (!isValid) {
+        errorDiv.classList.add('show');
+    }
+        
+    return isValid;
+}
+
+// Validate courses (Mantido)
+function validateCourses() {
+    let allCoursesValid = true;
+    
+    if (formData.tiposParceria.includes('cursos') && formData.cursos.length === 0) {
+        return false;
+    }
+
+    formData.cursos.forEach((course, index) => {
+        const itemElement = document.querySelector(`.course-item[data-index="${index}"]`);
+        
+        if (!course.nome || course.nome.trim() === '' || course.tipos.length === 0 || !course.regioes || course.regioes.trim() === '' || 
+            !course.frequencia || course.frequencia.trim() === '' || !course.duracao || course.duracao.trim() === '' || !course.mediaAlunos || course.mediaAlunos.trim() === '') {
+            allCoursesValid = false;
+        }
+        if (course.tipos.includes('outro') && (!course.tipoOutro || course.tipoOutro.trim() === '')) {
+            allCoursesValid = false;
+        }
+
+        if (!allCoursesValid && itemElement) {
+            itemElement.classList.add('error-course');
+            course.isClosed = false;
+        } else if (itemElement) {
+            itemElement.classList.remove('error-course');
+        }
+    });
+
+    return allCoursesValid;
+}
+
+// Email validation (Mantido)
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Phone validation (Mantido)
+function isValidPhone(phone) {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10; 
+}
+
+// Update progress (Mantido)
+function updateProgress() {
+    const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
+    totalSteps = visibleQuestions.length;
+    const visibleIndex = visibleQuestions.findIndex(q => q.id === questions[currentStep].id);
+    const currentVisibleStep = visibleIndex !== -1 ? visibleIndex + 1 : currentStep + 1;
+    const progress = (currentVisibleStep / totalSteps) * 100;
+    document.getElementById('progressBar').style.width = `${progress}%`;
+}
+
+// Update navigation buttons (Mantido)
+function updateNavigation() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    prevBtn.style.display = currentStep > 0 ? 'flex' : 'none';
+    const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
+    const isLastStep = questions[currentStep].id === visibleQuestions[visibleQuestions.length - 1].id;
+    if (isLastStep) {
+        nextBtn.querySelector('span').textContent = 'Enviar Solicitação de Parceria';
+    } else {
+        nextBtn.querySelector('span').textContent = 'Continuar →';
+    }
+}
+
+// ==========================================================
+// FUNÇÕES DE FORMATAÇÃO DE DADOS (Mantido)
+// ==========================================================
+
+function formatTiposParceria() { 
+    if (formData.tiposParceria.length === 0) return '';
+    const tipos = formData.tiposParceria.map(t => { if (t === 'conteudos') return 'Conteúdos para redes sociais'; if (t === 'cursos') return 'Cursos, treinamentos e/ou Hands-on'; return t; }).join(', ');
+    return tipos; 
+}
+
+function formatMarcas() { 
+    if (formData.marcas.length === 0) return '';
+    const marcas = formData.marcas.map(m => { if (m === 'tokuyama') return 'Tokuyama'; if (m === 'potenza') return 'Potenza'; if (m === 'nictone') return 'Nic Tone'; if (m === 'nao-utilizei') return 'Ainda não utilizei'; return m; }).join(', ');
+    return marcas; 
+}
+
+function formatProdutos() { 
+    return formData.produtos.length > 0 ? formData.produtos.join(', ') : '';
+}
+
+function formatMotivoPotenza() { 
+    if (!shouldShowQuestion({ id: 'q8.3' }) || !formData.motivoPotenza) return '';
+    let motivo = formData.motivoPotenza;
+    if (motivo === 'sem-oportunidade') motivo = 'Ainda não tive oportunidade de testar';
+    else if (motivo === 'outras-marcas') motivo = 'Utilizo outras marcas';
+    else if (motivo === 'testei') motivo = 'Testei e não me adaptei';
+    else if (motivo === 'outro' && formData.motivoPotenzaOutro) motivo = formData.motivoPotenzaOutro;
+    return motivo; 
+}
+
+function formatInteressePotenza() { 
+    if (!shouldShowQuestion({ id: 'q8.4' }) || formData.interessePotenza === undefined || formData.interessePotenza === null) { return ''; }
+    const interesse = formData.interessePotenza ? 'Sim' : 'Não';
+    let output = `Interesse em testar: ${interesse}`;
+    if (formData.interessePotenza && formData.produtosPotenzaInteresse && formData.produtosPotenzaInteresse.length > 0) { 
+        output += `: ${formData.produtosPotenzaInteresse.join(', ')}`;
+    }
+    return output; 
+}
+
+function formatParceriasAtivas() { 
+    let output = [];
+    const parcerias = formData.parceriasAtivas;
+    if (parcerias.includes('nenhuma')) { return 'Não possuo parcerias ativas'; }
+    if (parcerias.includes('dentais') && formData.parceriasOdonto) { output.push(`Dentais: ${formData.parceriasOdonto}`); }
+    if (parcerias.includes('empresas') && formData.parceriasEmpresas) { output.push(`Empresas: ${formData.parceriasEmpresas}`); }
+    let result = output.join(' | ');
+    if (shouldShowQuestion({ id: 'q10' }) && formData.exclusividade !== undefined) { 
+        if (result) { result += ' | '; }
+        result += `Exclusividade: ${formData.exclusividade ? 'Sim' : 'Não'}`;
+        if (formData.exclusividade && formData.exclusividadeLista) { result += ` com: ${formData.exclusividadeLista}`; }
+    }
+    return result; 
+}
+
+function formatCursos() { 
+    if (!formData.tiposParceria.includes('cursos') || formData.cursos.length === 0) { return ''; }
+    let text = [];
+    text.push(`[CURSO: Total Cadastrados]: ${formData.cursos.length}`);
+    formData.cursos.forEach((course, index) => { 
+        text.push(`\n\n--- CURSO ${index + 1}: ${course.nome || 'Sem Nome'} ---`);
+        const tipos = course.tipos.map(t => { 
+            let label = '';
+            if (t === 'teorico') label = 'Teórico'; else if (t === 'pratico') label = 'Prático'; else if (t === 'handson') label = 'Hands-on'; else if (t === 'cursovip') label = 'Curso Vip'; else if (t === 'posgraduacao') label = 'Pós-graduação'; else if (t === 'imersao') label = 'Imersão'; else if (t === 'outro' && course.tipoOutro) label = `Outro: ${course.tipoOutro}`;
+            return label;
+        }).filter(l => l).join(', ');
+        text.push(`- Tipo: ${tipos}`);
+        text.push(`- Regiões: ${course.regioes}`);
+        const freq = course.frequencia === 'fixas' ? 'Datas fixas e definidas com antecedência' : 'De acordo com demanda';
+        text.push(`- Frequência: ${freq}`);
+        text.push(`- Duração: ${course.duracao}`);
+        text.push(`- Média de alunos: ${course.mediaAlunos}`);
+        if (course.linkDivulgacao) { text.push(`- Link Divulgação: ${course.linkDivulgacao}`); }
+        if (course.linkConteudo) { text.push(`- Link Conteúdo: ${course.linkConteudo}`); }
+    });
+    return text.join('\n'); 
+}
+
+
+// Submit form to RD Station (Mantido)
+async function submitForm() {
+    document.getElementById('loadingSpinner').style.display = 'flex';
+    
+    const payload = {
+        token_rdstation: RD_CONFIG.token, 
+        identificador: RD_CONFIG.eventId, 
+        email: formData.email,
+        name: formData.name,
+        mobile_phone: formData.cf_telefone_whatsapp,
+        
+        cf_telefone_whatsapp: formData.cf_telefone_whatsapp,
+        cf_cidade_uf: formData.cf_cidade_uf,
+        
+        cf_instagram: formData.instagram,
+        cf_tipo_de_parceria: formatTiposParceria(),
+        cf_qual_marca_utiliza: formatMarcas(),
+        cf_conhecimento_dominio_e_pratica_com_produtos: formatProdutos(),
+        cf_motivo_de_nao_ter_testado_potenza: formatMotivoPotenza(),
+        cf_interesse_em_potenza: formatInteressePotenza(),
+        cf_tem_parcerias_ativas: formatParceriasAtivas(),
+        cf_tipos_de_cursos_e_treinamentos: formatCursos()
+    };
+
+    try {
+        const formParams = new URLSearchParams();
+        for (const key in payload) {
+            if (payload[key]) { 
+                formParams.append(key, payload[key]);
+            }
+        }
+
+        await fetch('https://www.rdstation.com.br/api/1.3/conversions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formParams
+        });
+
+        showSuccess();
+
+    } catch (error) {
+        console.error('Erro no envio (possivelmente falha de rede ou CORS):', error);
+        showSuccess(); 
+    }
+}
+
+// Função auxiliar para mostrar a tela de sucesso
+function showSuccess() {
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.querySelector('.container').style.display = 'none';
+    document.querySelector('.navigation').style.display = 'none';
+    document.getElementById('successMessage').style.display = 'flex';
+}
