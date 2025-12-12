@@ -910,7 +910,8 @@ function getAvailableProducts() {
 // CORREÇÃO DO BUG DO DROPDOWN: Marca que estava aberto e re-renderiza
 window.removeProduct = function(product, event) {
     event.stopPropagation();
-    isMultiselectOpen = document.getElementById('multiselect-dropdown').classList.contains('open');
+    const dropdown = document.getElementById('multiselect-dropdown');
+    isMultiselectOpen = dropdown && dropdown.classList.contains('open');
     
     formData.produtos = formData.produtos.filter(p => p !== product);
     renderQuestion(currentStep);
