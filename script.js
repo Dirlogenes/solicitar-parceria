@@ -80,6 +80,17 @@ let isMultiselectOpen = false;
 // FUNÇÕES CRÍTICAS (DEFINIÇÃO GARANTIDA NO TOPO)
 // ==========================================================
 
+// --- FUNÇÃO CRÍTICA FALTANTE ---
+function handleCheckboxChange(question, value, checked) {
+    if (checked) {
+        if (!formData[question.field].includes(value)) {
+            formData[question.field].push(value);
+        }
+    } else {
+        formData[question.field] = formData[question.field].filter(v => v !== value);
+    }
+}
+
 // Função principal de inicialização e busca de dados
 async function fetchCidadesIBGE() {
     console.log('Iniciando busca de dados do IBGE...');
@@ -134,7 +145,7 @@ function setupQuestionListeners(question) {
         checkboxes.forEach(div => {
             const checkbox = div.querySelector('input[type="checkbox"]');
             checkbox.addEventListener('change', (e) => {
-                handleCheckboxChange(question, e.target.value, e.target.checked);
+                handleCheckboxChange(question, e.target.value, e.target.checked); // AGORA handleCheckboxChange EXISTE
                 div.classList.toggle('selected', e.target.checked);
                 if (question.type === 'checkbox-exclusive') {
                     renderQuestion(currentStep);
@@ -422,7 +433,6 @@ function buildQuestions() {
             id: 'q3',
             number: 'Etapa 1',
             title: 'Qual é o seu Telefone/Whatsapp?',
-            subtitle: 'Informe com DDD',
             type: 'tel',
             field: 'cf_telefone_whatsapp',
             required: true,
@@ -465,7 +475,6 @@ function buildQuestions() {
             id: 'q7',
             number: 'Etapa 2',
             title: 'Quais marcas da PHS você utiliza ou já utilizou na sua prática clínica ou em aulas?',
-            subtitle: 'Selecione uma ou mais opções',
             type: 'checkbox-exclusive',
             field: 'marcas',
             required: true,
@@ -489,7 +498,6 @@ function buildQuestions() {
             id: 'q8.3',
             number: 'Etapa 2',
             title: 'Qual o principal motivo de você ainda não ter utilizado nossa linha de produtos Potenza?',
-            subtitle: '(Clareadores, Dessensibilizantes, Condicionadores Ácidos, Pastas de Polimento, etc..)',
             type: 'radio-with-other',
             field: 'motivoPotenza',
             required: true,
@@ -544,7 +552,6 @@ function buildQuestions() {
             id: 'q11',
             number: 'Etapa 4',
             title: 'Cadastre um ou mais cursos/treinamentos que já realizou ou ainda irá realizar.',
-            subtitle: 'Se tiver mais de um tipo, cadastre ao menos um de cada como exemplo. Queremos entender melhor sobre o formato e como podemos ajudá-lo.',
             type: 'course-repeater',
             field: 'cursos',
             required: true,
