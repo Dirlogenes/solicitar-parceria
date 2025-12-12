@@ -4,19 +4,9 @@ const RD_CONFIG = {
     eventId: 'solicitacao-parceria-phs-externo' 
 };
 
-// --- Dados de Autocomplete (SIMULAÇÃO) ---
-const CIDADES_UF_DEMO = [
-    'São Paulo, SP',
-    'Rio de Janeiro, RJ',
-    'Belo Horizonte, MG',
-    'Curitiba, PR',
-    'Joinville, SC',
-    'Manaus, AM',
-    'Salvador, BA',
-    'Porto Alegre, RS',
-    'Brasília, DF',
-    'Recife, PE'
-];
+// --- Dados de Autocomplete ---
+// Esta lista será preenchida pela API do IBGE
+let CIDADES_UF = []; 
 
 // Product Lists (ATUALIZADA com os nomes em Title Case)
 const PRODUCTS = {
@@ -86,9 +76,58 @@ let questions = [];
 // Estado global para controlar se o multiselect estava aberto antes da re-renderização
 let isMultiselectOpen = false;
 
-// Initialize form
-document.addEventListener('DOMContentLoaded', () => {
+
+// Função para buscar e montar a lista de Cidades/UF do IBGE
+async function fetchCidadesIBGE() {
+    console.log('Iniciando busca de dados do IBGE...');
+    try {
+        const urlEstados = 'https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome';
+        const responseEstados = await fetch(urlEstados);
+        const estados = await responseEstados.json();
+        
+        const promessasMunicipios = estados.map(estado => {
+            const urlMunicipios = `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado.sigla}/municipios`;
+            return fetch(urlMunicipios)
+                .then(res => res.json())
+                .then(municipios => {
+                    return municipios.map(municipio => `${municipio.nome}, ${estado.sigla}`);
+                });
+        });
+
+        const todasCidadesArray = await Promise.all(promessasMunicipios);
+        
+        CIDADES_UF = todasCidadesArray.flat();
+        console.log(`Dados do IBGE carregados. Total de ${CIDADES_UF.length} cidades.`);
+        
+        // Atualiza a pergunta q4 com a lista completa
+        const q4 = questions.find(q => q.id === 'q4');
+        if (q4) {
+            q4.options = CIDADES_UF;
+        }
+
+    } catch (error) {
+        console.error('Erro ao carregar dados do IBGE. Usando lista de fallback.', error);
+        // Fallback: Lista de segurança
+        CIDADES_UF = [
+            'São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG', 
+            'Curitiba, PR', 'Salvador, BA', 'Recife, PE', 'Manaus, AM', 'Joinville, SC'
+        ];
+        const q4 = questions.find(q => q.id === 'q4');
+        if (q4) {
+            q4.options = CIDADES_UF;
+        }
+    }
+}
+
+
+// Initialize form (AJUSTADO para iniciar a busca do IBGE)
+document.addEventListener('DOMContentLoaded', async () => {
     buildQuestions();
+    
+    // 1. Inicia o carregamento das cidades (assíncrono)
+    await fetchCidadesIBGE(); 
+    
+    // 2. Renderiza o formulário APÓS o carregamento dos dados
     renderQuestion(currentStep);
     updateProgress();
     setupNavigation();
@@ -134,7 +173,7 @@ function buildQuestions() {
             required: true,
             validation: 'text',
             autocomplete: 'single', 
-            options: CIDADES_UF_DEMO 
+            options: [] // Será preenchida por fetchCidadesIBGE
         },
         {
             id: 'q5',
@@ -286,20 +325,24 @@ function renderQuestion(step) {
     questionDiv.innerHTML = html;
     container.appendChild(questionDiv);
         
-    // Setup event listeners
+    // Setup event listeners (AGORA DEVE FUNCIONAR)
     setupQuestionListeners(question);
     
-    // Configura Autocomplete (Cidade/UF e Regiões de Curso)
+    // Configura Autocomplete
     if (question.autocomplete) {
         setupAutocomplete(question);
     }
     
     // CORREÇÃO DO BUG: Reabre o multiselect se ele estava aberto antes da re-renderização
     if (isMultiselectOpen && (question.type === 'multiselect' || question.type === 'checkbox-with-multiselect')) {
-        const dropdown = document.getElementById('multiselect-dropdown') || document.getElementById('potenza-multiselect-dropdown');
-        if (dropdown) {
-            dropdown.classList.add('open');
-        }
+        // Usa setTimeout para garantir que a DOM foi construída
+        setTimeout(() => {
+            const dropdown = document.getElementById('multiselect-dropdown') || document.getElementById('potenza-multiselect-dropdown');
+            if (dropdown) {
+                dropdown.classList.add('open');
+            }
+            isMultiselectOpen = false; // Reseta o estado após reabrir
+        }, 50);
     }
 }
 
@@ -454,7 +497,6 @@ function renderMultiselect(question) {
         
     products.forEach(product => {
         const isSelected = selected.includes(product);
-        // LÓGICA DO NOTION: Esconde item se já estiver selecionado
         const displayStyle = isSelected ? 'display: none;' : 'display: flex;'; 
         
         html += `
@@ -502,9 +544,10 @@ function getAvailableProducts() {
     return products;
 }
 
-// CORREÇÃO: Passa o evento e usa isMultiselectOpen
+// CORREÇÃO DO BUG DO DROPDOWN: Marca que estava aberto e re-renderiza
 window.removeProduct = function(product, event) {
     event.stopPropagation();
+    // Verifica e salva o estado do dropdown
     isMultiselectOpen = document.getElementById('multiselect-dropdown').classList.contains('open');
     
     formData.produtos = formData.produtos.filter(p => p !== product);
@@ -573,7 +616,6 @@ function renderPotenzaMultiselect() {
         
     PRODUCTS.potenza.forEach(product => {
         const isSelected = selected.includes(product);
-        // LÓGICA DO NOTION: Esconde item se já estiver selecionado
         const displayStyle = isSelected ? 'display: none;' : 'display: flex;'; 
         
         html += `
@@ -602,7 +644,7 @@ function renderPotenzaMultiselect() {
     return html;
 }
 
-// CORREÇÃO: Passa o evento e usa isMultiselectOpen
+// CORREÇÃO DO BUG DO DROPDOWN: Marca que estava aberto e re-renderiza
 window.removePotenzaProduct = function(product, event) {
     event.stopPropagation();
     isMultiselectOpen = document.getElementById('potenza-multiselect-dropdown').classList.contains('open');
@@ -810,8 +852,6 @@ window.toggleCourse = function(index, forceClose = false) {
     renderQuestion(currentStep); 
 }
 
-// ... (Restante das funções de renderização de curso)
-
 function renderCourseTypes(course, index) {
     const types = ['Teórico', 'Prático', 'Hands-on', 'Curso Vip', 'Pós-graduação', 'Imersão', 'Outro'];
     let html = '';
@@ -960,7 +1000,8 @@ function setupNavigation() {
     form.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const inputField = e.target;
-            const isAutocompleteOpen = document.querySelector('.autocomplete-list').innerHTML.trim() !== '';
+            const autocompleteList = document.querySelector('.autocomplete-list');
+            const isAutocompleteOpen = autocompleteList && autocompleteList.innerHTML.trim() !== '';
 
             if (!isAutocompleteOpen && !e.shiftKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault(); 
@@ -1044,7 +1085,7 @@ function validateCurrentQuestion() {
             break;
                 
         case 'checkbox-with-multiselect':
-            if (formData[question.field] === undefined || formData.question.field === null) {
+            if (formData[question.field] === undefined || formData[question.field] === null) {
                 isValid = false;
             } else if (formData.question.field === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
                 isValid = false;
@@ -1100,8 +1141,77 @@ function validateCurrentQuestion() {
     return isValid;
 }
 
+// Validate courses (Mantido)
+function validateCourses() {
+    let allCoursesValid = true;
+    
+    if (formData.tiposParceria.includes('cursos') && formData.cursos.length === 0) {
+        return false;
+    }
 
-// Restante das funções de validação e formatação (mantidas)
+    formData.cursos.forEach((course, index) => {
+        const itemElement = document.querySelector(`.course-item[data-index="${index}"]`);
+        
+        // Verifica campos obrigatórios
+        if (!course.nome || course.nome.trim() === '' || course.tipos.length === 0 || !course.regioes || course.regioes.trim() === '' || 
+            !course.frequencia || course.frequencia.trim() === '' || !course.duracao || course.duracao.trim() === '' || !course.mediaAlunos || course.mediaAlunos.trim() === '') {
+            allCoursesValid = false;
+        }
+        if (course.tipos.includes('outro') && (!course.tipoOutro || course.tipoOutro.trim() === '')) {
+            allCoursesValid = false;
+        }
+
+        // Aplica classe de erro visual nos inputs
+        if (!allCoursesValid && itemElement) {
+            itemElement.classList.add('error-course');
+            course.isClosed = false;
+        } else if (itemElement) {
+            itemElement.classList.remove('error-course');
+        }
+    });
+
+    return allCoursesValid;
+}
+
+
+// Email validation (Mantido)
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Phone validation (Mantido)
+function isValidPhone(phone) {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10; 
+}
+
+// Update progress (Mantido)
+function updateProgress() {
+    const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
+    totalSteps = visibleQuestions.length;
+    const visibleIndex = visibleQuestions.findIndex(q => q.id === questions[currentStep].id);
+    const currentVisibleStep = visibleIndex !== -1 ? visibleIndex + 1 : currentStep + 1;
+    const progress = (currentVisibleStep / totalSteps) * 100;
+    document.getElementById('progressBar').style.width = `${progress}%`;
+}
+
+// Update navigation buttons (Mantido)
+function updateNavigation() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    prevBtn.style.display = currentStep > 0 ? 'flex' : 'none';
+    const visibleQuestions = questions.filter(q => !q.conditional || shouldShowQuestion(q));
+    const isLastStep = questions[currentStep].id === visibleQuestions[visibleQuestions.length - 1].id;
+    if (isLastStep) {
+        nextBtn.querySelector('span').textContent = 'Enviar Solicitação de Parceria';
+    } else {
+        nextBtn.querySelector('span').textContent = 'Continuar →';
+    }
+}
+
+// ==========================================================
+// FUNÇÕES DE FORMATAÇÃO DE DADOS (Mantido)
+// ==========================================================
 
 function formatTiposParceria() { 
     if (formData.tiposParceria.length === 0) return '';
