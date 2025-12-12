@@ -414,7 +414,7 @@ textarea.error {
     padding: 24px;
     margin-bottom: 20px;
     background: #F9FAFB;
-    transition: all 0.3s ease; /* Adicionado para transição suave do erro */
+    transition: all 0.3s ease;
 }
 
 /* Adicionado para resolver o problema 2 - Feedback visual de curso inválido */
