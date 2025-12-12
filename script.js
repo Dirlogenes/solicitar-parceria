@@ -77,456 +77,285 @@ let questions = [];
 let isMultiselectOpen = false;
 
 
-// Função para buscar e montar a lista de Cidades/UF do IBGE
-async function fetchCidadesIBGE() {
-    console.log('Iniciando busca de dados do IBGE...');
-    try {
-        const urlEstados = 'https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome';
-        const responseEstados = await fetch(urlEstados);
-        const estados = await responseEstados.json();
-        
-        const promessasMunicipios = estados.map(estado => {
-            const urlMunicipios = `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado.sigla}/municipios`;
-            return fetch(urlMunicipios)
-                .then(res => res.json())
-                .then(municipios => {
-                    return municipios.map(municipio => `${municipio.nome}, ${estado.sigla}`);
-                });
+// ==========================================================
+// FUNÇÕES GLOBAIS DE EXECUÇÃO (COLOCADAS NO TOPO PARA GARANTIA)
+// ==========================================================
+
+// --- FUNÇÃO CRÍTICA PARA LIGAR EVENTOS ---
+function setupQuestionListeners(question) {
+    const textInput = document.getElementById(question.field);
+    if (textInput) {
+        textInput.addEventListener('input', (e) => {
+            formData[question.field] = e.target.value;
         });
-
-        const todasCidadesArray = await Promise.all(promessasMunicipios);
+    }
         
-        CIDADES_UF = todasCidadesArray.flat();
-        console.log(`Dados do IBGE carregados. Total de ${CIDADES_UF.length} cidades.`);
+    if (question.type === 'checkbox' || question.type === 'checkbox-exclusive') {
+        const checkboxes = document.querySelectorAll('.checkbox-option');
+        checkboxes.forEach(div => {
+            const checkbox = div.querySelector('input[type="checkbox"]');
+            checkbox.addEventListener('change', (e) => {
+                handleCheckboxChange(question, e.target.value, e.target.checked);
+                div.classList.toggle('selected', e.target.checked);
+                if (question.type === 'checkbox-exclusive') {
+                    renderQuestion(currentStep);
+                }
+            });
+        });
+    }
         
-        // Atualiza a pergunta q4 com a lista completa
-        const q4 = questions.find(q => q.id === 'q4');
-        if (q4) {
-            q4.options = CIDADES_UF;
+    if (question.type === 'multiselect') {
+        setupMultiselect();
+    }
+        
+    if (question.type === 'radio-with-other') {
+        const radios = document.querySelectorAll(`input[name="${question.field}"]`);
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                formData[question.field] = e.target.value;
+                document.querySelectorAll('.radio-option').forEach(div => {
+                    div.classList.remove('selected');
+                });
+                e.target.closest('.radio-option').classList.add('selected');
+                document.querySelectorAll('.conditional-input').forEach(input => {
+                    input.classList.remove('show');
+                });
+                const conditionalInput = document.getElementById(`input-${e.target.value}`);
+                if (conditionalInput) {
+                    conditionalInput.classList.add('show');
+                }
+            });
+        });
+                
+        const otherInput = document.getElementById(`${question.field}-outro`);
+        if (otherInput) {
+            otherInput.addEventListener('input', (e) => {
+                formData.motivoPotenzaOutro = e.target.value;
+            });
         }
-
-    } catch (error) {
-        console.error('Erro ao carregar dados do IBGE. Usando lista de fallback.', error);
-        // Fallback: Lista de segurança
-        CIDADES_UF = [
-            'São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG', 
-            'Curitiba, PR', 'Salvador, BA', 'Recife, PE', 'Manaus, AM', 'Joinville, SC'
-        ];
-        const q4 = questions.find(q => q.id === 'q4');
-        if (q4) {
-            q4.options = CIDADES_UF;
+    }
+        
+    if (question.type === 'checkbox-with-multiselect') {
+        const radios = document.querySelectorAll(`input[name="${question.field}"]`);
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                formData[question.field] = e.target.value === 'true';
+                document.querySelectorAll('.radio-option').forEach(div => {
+                    div.classList.remove('selected');
+                });
+                e.target.closest('.radio-option').classList.add('selected');
+                const multiselect = document.getElementById('potenza-multiselect');
+                if (multiselect) {
+                    if (e.target.value === 'true') {
+                        multiselect.classList.add('show');
+                        setupPotenzaMultiselect();
+                    } else {
+                        multiselect.classList.remove('show');
+                    }
+                }
+            });
+        });
+    }
+        
+    if (question.type === 'checkbox-with-inputs') {
+        const checkboxes = document.querySelectorAll('.checkbox-option');
+        checkboxes.forEach(div => {
+            const checkbox = div.querySelector('input[type="checkbox"]');
+            checkbox.addEventListener('change', (e) => {
+                handleCheckboxChange(question, e.target.value, e.target.checked);
+                div.classList.toggle('selected', e.target.checked);
+                const conditionalInput = document.getElementById(`input-${e.target.value}`);
+                if (conditionalInput) {
+                    if (e.target.checked) {
+                        conditionalInput.classList.add('show');
+                    } else {
+                        conditionalInput.classList.remove('show');
+                    }
+                }
+            });
+        });
+                
+        const odonto = document.getElementById('parceriasOdonto');
+        if (odonto) {
+            odonto.addEventListener('input', (e) => {
+                formData.parceriasOdonto = e.target.value;
+            });
         }
+                
+        const empresas = document.getElementById('parceriasEmpresas');
+        if (empresas) {
+            empresas.addEventListener('input', (e) => {
+                formData.parceriasEmpresas = e.target.value;
+            });
+        }
+    }
+        
+    if (question.type === 'radio-with-input') {
+        const radios = document.querySelectorAll(`input[name="${question.field}"]`);
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                formData[question.field] = e.target.value === 'true';
+                document.querySelectorAll('.radio-option').forEach(div => {
+                    div.classList.remove('selected');
+                });
+                e.target.closest('.radio-option').classList.add('selected');
+                const input = document.getElementById('input-exclusividade');
+                if (input) {
+                    if (e.target.value === 'true') {
+                        input.classList.add('show');
+                    } else {
+                        input.classList.remove('show');
+                    }
+                }
+            });
+        });
+                
+        const exclusividadeInput = document.getElementById('exclusividadeLista');
+        if (exclusividadeInput) {
+            exclusividadeInput.addEventListener('input', (e) => {
+                formData.exclusividadeLista = e.target.value;
+            });
+        }
+    }
+        
+    if (question.type === 'course-repeater') {
+        setupCourseListeners();
     }
 }
 
-
-// Initialize form (AJUSTADO para iniciar a busca do IBGE)
-document.addEventListener('DOMContentLoaded', async () => {
-    buildQuestions();
-    
-    // 1. Inicia o carregamento das cidades (assíncrono)
-    await fetchCidadesIBGE(); 
-    
-    // 2. Renderiza o formulário APÓS o carregamento dos dados
-    renderQuestion(currentStep);
-    updateProgress();
-    setupNavigation();
-});
-
-// Build questions array based on logic
-function buildQuestions() {
-    questions = [
-        {
-            id: 'q1',
-            number: 'Etapa 1',
-            title: 'Qual é o seu nome?',
-            type: 'text',
-            field: 'name',
-            required: true,
-            validation: 'text'
-        },
-        {
-            id: 'q2',
-            number: 'Etapa 1',
-            title: 'Qual é o seu e-mail?',
-            type: 'email',
-            field: 'email',
-            required: true,
-            validation: 'email'
-        },
-        {
-            id: 'q3',
-            number: 'Etapa 1',
-            title: 'Qual é o seu Telefone/Whatsapp?',
-            subtitle: 'Informe com DDD',
-            type: 'tel',
-            field: 'cf_telefone_whatsapp',
-            required: true,
-            validation: 'phone'
-        },
-        {
-            id: 'q4',
-            number: 'Etapa 1',
-            title: 'Qual sua Cidade/UF?',
-            type: 'text',
-            field: 'cf_cidade_uf',
-            required: true,
-            validation: 'text',
-            autocomplete: 'single', 
-            options: [] // Será preenchida por fetchCidadesIBGE
-        },
-        {
-            id: 'q5',
-            number: 'Etapa 1',
-            title: 'Qual o seu @ usuário do instagram?',
-            type: 'text',
-            field: 'instagram',
-            required: true,
-            validation: 'text'
-        },
-        {
-            id: 'q6',
-            number: 'Etapa 1',
-            title: 'Qual tipo de parceria têm interesse?',
-            subtitle: 'Selecione uma ou mais opções',
-            type: 'checkbox',
-            field: 'tiposParceria',
-            required: true,
-            options: [
-                { value: 'conteudos', label: 'Conteúdos para redes sociais.' },
-                { value: 'cursos', label: 'Cursos, treinamentos e/ou Hands-on.' }
-            ]
-        },
-        {
-            id: 'q7',
-            number: 'Etapa 2',
-            title: 'Quais marcas da PHS você utiliza ou já utilizou na sua prática clínica ou em aulas?',
-            subtitle: 'Selecione uma ou mais opções',
-            type: 'checkbox-exclusive',
-            field: 'marcas',
-            required: true,
-            options: [
-                { value: 'tokuyama', label: 'Tokuyama' },
-                { value: 'potenza', label: 'Potenza' },
-                { value: 'nictone', label: 'Nic Tone' },
-                { value: 'nao-utilizei', label: 'Ainda não utilizei, será meu primeiro contato as marcas da PHS.', exclusive: true }
-            ]
-        },
-        {
-            id: 'q8',
-            number: 'Etapa 2',
-            title: '',
-            type: 'multiselect',
-            field: 'produtos',
-            required: true,
-            conditional: true
-        },
-        {
-            id: 'q8.3',
-            number: 'Etapa 2',
-            title: 'Qual o principal motivo de você ainda não ter utilizado nossa linha de produtos Potenza?',
-            subtitle: '(Clareadores, Dessensibilizantes, Condicionadores Ácidos, Pastas de Polimento, etc..)',
-            type: 'radio-with-other',
-            field: 'motivoPotenza',
-            required: true,
-            conditional: true,
-            options: [
-                { value: 'sem-oportunidade', label: 'Ainda não tive oportunidade de testar.' },
-                { value: 'outras-marcas', label: 'Utilizo outras marcas.' },
-                { value: 'testei', label: 'Testei e não me adaptei.' },
-                { value: 'outro', label: 'Outro', hasInput: true }
-            ]
-        },
-        {
-            id: 'q8.4',
-            number: 'Etapa 2',
-            title: 'Você teria interesse em testar os produtos da linha Potenza?',
-            type: 'checkbox-with-multiselect',
-            field: 'interessePotenza',
-            required: true,
-            conditional: true,
-            options: [
-                { value: true, label: 'Sim, tenho interesse.', hasMultiselect: true },
-                { value: false, label: 'Não tenho interesse.' }
-            ]
-        },
-        {
-            id: 'q9',
-            number: 'Etapa 3',
-            title: 'Atualmente, você possuí parceria com ativas no nosso segmento?',
-            type: 'checkbox-with-inputs',
-            field: 'parceriasAtivas',
-            required: true,
-            options: [
-                { value: 'dentais', label: 'Tenho parceria com Dentais.', hasInput: true, inputLabel: 'Liste suas dentais parceiras:' },
-                { value: 'empresas', label: 'Tenho parcerias com outras empresas.', hasInput: true, inputLabel: 'Lista as empresas parceiras:' },
-                { value: 'nenhuma', label: 'Não possuo parcerias ativas.' }
-            ]
-        },
-        {
-            id: 'q10',
-            number: 'Etapa 3',
-            title: 'Possuí exclusividade com algum desses parceiros?',
-            type: 'radio-with-input',
-            field: 'exclusividade',
-            required: true,
-            conditional: true,
-            options: [
-                { value: true, label: 'Sim possuo exclusividade.', hasInput: true, inputLabel: 'Lista parcerias com exclusividade:' },
-                { value: false, label: 'Não possuo exclusividade.' }
-            ]
-        },
-        {
-            id: 'q11',
-            number: 'Etapa 4',
-            title: 'Cadastre um ou mais cursos/treinamentos que já realizou ou ainda irá realizar.',
-            subtitle: 'Se tiver mais de um tipo, cadastre ao menos um de cada como exemplo. Queremos entender melhor sobre o formato e como podemos ajudá-lo.',
-            type: 'course-repeater',
-            field: 'cursos',
-            required: true,
-            conditional: true
+// Funções de Gerenciamento de Estado (mantidas)
+function handleCheckboxChange(question, value, checked) {
+    if (checked) {
+        if (!formData[question.field].includes(value)) {
+            formData[question.field].push(value);
         }
-    ];
+    } else {
+        formData[question.field] = formData[question.field].filter(v => v !== value);
+    }
 }
 
-// Render current question
-function renderQuestion(step) {
-    const container = document.getElementById('questionsContainer');
-    container.innerHTML = '';
-        
-    const question = questions[step];
-        
-    if (question.conditional && !shouldShowQuestion(question)) {
-        if (currentStep < questions.length - 1) {
-            currentStep++;
-            renderQuestion(currentStep);
-        } else {
-            submitForm();
-        }
-        return;
-    }
-        
-    const questionDiv = document.createElement('div');
-    questionDiv.className = 'question active';
-    questionDiv.id = question.id;
-        
-    let html = `
-        <div class="question-number">${question.number}</div>
-        <h2 class="question-title">${getQuestionTitle(question)}</h2>
-    `;
-        
-    if (question.subtitle) {
-        html += `<p class="question-subtitle">${question.subtitle}</p>`;
-    }
-        
-    html += `<div class="input-group">${renderInput(question)}</div>`;
-    html += `<div class="error-message" id="error-${question.id}">Este campo é obrigatório</div>`;
-        
-    questionDiv.innerHTML = html;
-    container.appendChild(questionDiv);
-        
-    // Setup event listeners (CORRIGIDO)
-    setupQuestionListeners(question);
+// --- Funções do Multiselect ---
+function setupMultiselect() {
+    const trigger = document.getElementById('multiselect-trigger');
+    const dropdown = document.getElementById('multiselect-dropdown');
+    const search = document.getElementById('multiselect-search');
+    const options = document.querySelectorAll('#multiselect-options .multiselect-option');
+    const selectedValues = formData.produtos || [];
     
-    // Configura Autocomplete
-    if (question.autocomplete) {
-        setupAutocomplete(question);
-    }
-    
-    // CORREÇÃO DO BUG: Reabre o multiselect se ele estava aberto antes da re-renderização
-    if (isMultiselectOpen && (question.type === 'multiselect' || question.type === 'checkbox-with-multiselect')) {
-        setTimeout(() => {
-            const dropdown = document.getElementById('multiselect-dropdown') || document.getElementById('potenza-multiselect-dropdown');
-            if (dropdown) {
-                dropdown.classList.add('open');
+    if (trigger && dropdown) {
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            dropdown.classList.toggle('open');
+        });
+                
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.multiselect-container')) {
+                dropdown.classList.remove('open');
             }
-            isMultiselectOpen = false; // Reseta o estado após reabrir
-        }, 50);
+        });
     }
-}
+    
+    options.forEach(option => {
+        const value = option.dataset.value;
+        const isSelected = selectedValues.includes(value);
 
-// Get dynamic question title (mantido)
-function getQuestionTitle(question) {
-    if (question.id === 'q8') {
-        const usedBrands = formData.marcas.includes('nao-utilizei');
-        if (usedBrands) {
-            return 'Qual dos nossos produtos você gostaria de utilizar?';
+        if (isSelected) {
+            option.style.display = 'none';
         } else {
-            return 'Dos produtos que utiliza ou já utilizou, quais você possuí mais conhecimento, prática e domínio técnico?';
+            option.style.display = 'flex';
         }
-    }
-    return question.title;
-}
 
-// Check if question should be shown (mantido)
-function shouldShowQuestion(question) {
-    switch (question.id) {
-        case 'q8':
-            const selectedBrands = formData.marcas.length > 0;
-            const onlyNaoUtilizei = formData.marcas.length === 1 && formData.marcas.includes('nao-utilizei');
-            return selectedBrands;
-                
-        case 'q8.3':
-        case 'q8.4':
-            const selectedPotenza = formData.marcas.includes('potenza');
-            const selectedNaoUtilizei = formData.marcas.includes('nao-utilizei');
-            const selectedPotenzaProducts = formData.produtos.some(p => 
-                PRODUCTS.potenza.includes(p)
-            );
+        option.addEventListener('click', (e) => {
+            e.stopPropagation(); // Impede o fecho
+            const checkbox = option.querySelector('input[type="checkbox"]');
+                        
+            if (formData.produtos.includes(value)) {
+                formData.produtos = formData.produtos.filter(p => p !== value);
+                checkbox.checked = false;
+            } else {
+                formData.produtos.push(value);
+                checkbox.checked = true;
+            }
             
-            return !selectedPotenza || (selectedNaoUtilizei && !selectedPotenzaProducts);
-                
-        case 'q10':
-            return !formData.parceriasAtivas.includes('nenhuma');
-                
-        case 'q11':
-            return formData.tiposParceria.includes('cursos');
-                
-        default:
-            return true;
+            // Salva o estado antes de re-renderizar
+            isMultiselectOpen = true; 
+            renderQuestion(currentStep); 
+        });
+    });
+
+    if (search) {
+        search.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                const value = option.dataset.value;
+                const isSelected = selectedValues.includes(value);
+
+                if (!isSelected && text.includes(searchTerm)) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
     }
 }
 
-// Render input based on question type (mantido)
-function renderInput(question) {
-    switch (question.type) {
-        case 'text':
-        case 'email':
-        case 'tel':
-            return `<input type="${question.type}" id="${question.field}" value="${formData[question.field] || ''}" placeholder="Digite sua resposta...">`;
-                
-        case 'checkbox':
-            return renderCheckboxes(question);
-                
-        case 'checkbox-exclusive':
-            return renderExclusiveCheckboxes(question);
-                
-        case 'multiselect':
-            return renderMultiselect(question);
-                
-        case 'radio-with-other':
-            return renderRadioWithOther(question);
-                
-        case 'checkbox-with-multiselect':
-            return renderCheckboxWithMultiselect(question);
-                
-        case 'checkbox-with-inputs':
-            return renderCheckboxWithInputs(question);
-                
-        case 'radio-with-input':
-            return renderRadioWithInput(question);
-                
-        case 'course-repeater':
-            return renderCourseRepeater();
-                
-        default:
-            return '';
-    }
-}
-
-// Restante das funções de renderização (renderCheckboxes, renderExclusiveCheckboxes, etc.)
-
-function renderCheckboxes(question) {
-    let html = '<div class="checkbox-group">';
-    question.options.forEach(opt => {
-        const checked = formData[question.field].includes(opt.value) ? 'checked' : '';
-        const selected = checked ? 'selected' : '';
-        html += `
-            <div class="checkbox-option ${selected}" data-value="${opt.value}">
-                <input type="checkbox" id="${opt.value}" value="${opt.value}" ${checked}>
-                <label for="${opt.value}">${opt.label}</label>
-            </div>
-        `;
-    });
-    html += '</div>';
-    return html;
-}
-
-function renderExclusiveCheckboxes(question) {
-    let html = '<div class="checkbox-group">';
-    question.options.forEach(opt => {
-        const checked = formData[question.field].includes(opt.value) ? 'checked' : '';
-        const selected = checked ? 'selected' : '';
-        const disabled = shouldDisableOption(question, opt) ? 'disabled' : '';
-        html += `
-            <div class="checkbox-option ${selected} ${disabled}" data-value="${opt.value}" data-exclusive="${opt.exclusive || false}">
-                <input type="checkbox" id="${opt.value}" value="${opt.value}" ${checked} ${disabled}>
-                <label for="${opt.value}">${opt.label}</label>
-            </div>
-        `;
-    });
-    html += '</div>';
-    return html;
-}
-
-function shouldDisableOption(question, option) {
-    const values = formData[question.field];
-    const hasExclusive = values.some(v => {
-        const opt = question.options.find(o => o.value === v);
-        return opt && opt.exclusive;
-    });
+function setupPotenzaMultiselect() {
+    const trigger = document.getElementById('potenza-multiselect-trigger');
+    const dropdown = document.getElementById('potenza-multiselect-dropdown');
+    const options = document.querySelectorAll('#potenza-multiselect-options .multiselect-option');
+    const selectedValues = formData.produtosPotenzaInteresse || [];
         
-    if (hasExclusive && !option.exclusive) {
-        return true;
+    if (trigger && dropdown) {
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+        });
+                
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#potenza-multiselect')) {
+                dropdown.classList.remove('open');
+            }
+        });
     }
         
-    if (!hasExclusive && option.exclusive && values.length > 0) {
-        return true;
-    }
-        
-    return false;
-}
+    options.forEach(option => {
+        const value = option.dataset.value;
+        const isSelected = selectedValues.includes(value);
 
-function renderMultiselect(question) {
-    const products = getAvailableProducts();
-    const selected = formData.produtos || [];
+        if (isSelected) {
+            option.style.display = 'none';
+        } else {
+            option.style.display = 'flex';
+        }
         
-    let html = `
-        <div class="multiselect-container">
-            <div class="multiselect-trigger" id="multiselect-trigger">
-                <span>Pesquise pelo nome ou selecione na lista</span>
-                <span>▼</span>
-            </div>
-            <div class="multiselect-dropdown" id="multiselect-dropdown">
-                <div class="multiselect-search">
-                    <input type="text" id="multiselect-search" placeholder="Pesquisar produto...">
-                </div>
-                <div class="multiselect-options" id="multiselect-options">
-    `;
-        
-    products.forEach(product => {
-        const isSelected = selected.includes(product);
-        const displayStyle = isSelected ? 'display: none;' : 'display: flex;'; 
-        
-        html += `
-            <div class="multiselect-option ${isSelected ? 'selected' : ''}" data-value="${product}" style="${displayStyle}">
-                <input type="checkbox" ${isSelected ? 'checked' : ''}> ${product}
-            </div>
-        `;
+        option.addEventListener('click', (e) => {
+            e.stopPropagation(); // Impede o fecho
+            const checkbox = option.querySelector('input[type="checkbox"]');
+                        
+            if (!formData.produtosPotenzaInteresse) {
+                formData.produtosPotenzaInteresse = [];
+            }
+                        
+            if (formData.produtosPotenzaInteresse.includes(value)) {
+                formData.produtosPotenzaInteresse = formData.produtosPotenzaInteresse.filter(p => p !== value);
+                checkbox.checked = false;
+            } else {
+                formData.produtosPotenzaInteresse.push(value);
+                checkbox.checked = true;
+            }
+            
+            // Salva o estado antes de re-renderizar
+            isMultiselectOpen = true; 
+            renderQuestion(currentStep);
+        });
     });
-        
-    html += `
-                </div>
-            </div>
-            <div class="selected-items" id="selected-items">
-    `;
-        
-    selected.forEach(product => {
-        html += `
-            <div class="selected-item">
-                ${product}
-                <button type="button" onclick="removeProduct('${product}', event)">×</button>
-            </div>
-        `;
-    });
-        
-    html += `
-            </div>
-        </div>
-    `;
-        
-    return html;
 }
+// --- FIM Funções do Multiselect ---
+
+
+// --- Funções Auxiliares de Renderização e Estado ---
 
 function getAvailableProducts() {
     const brands = formData.marcas;
@@ -543,12 +372,19 @@ function getAvailableProducts() {
     return products;
 }
 
-// CORREÇÃO DO BUG DO DROPDOWN: Marca que estava aberto e re-renderiza
 window.removeProduct = function(product, event) {
     event.stopPropagation();
     isMultiselectOpen = document.getElementById('multiselect-dropdown').classList.contains('open');
     
     formData.produtos = formData.produtos.filter(p => p !== product);
+    renderQuestion(currentStep);
+};
+
+window.removePotenzaProduct = function(product, event) {
+    event.stopPropagation();
+    isMultiselectOpen = document.getElementById('potenza-multiselect-dropdown').classList.contains('open');
+
+    formData.produtosPotenzaInteresse = formData.produtosPotenzaInteresse.filter(p => p !== product);
     renderQuestion(currentStep);
 };
 
@@ -641,15 +477,6 @@ function renderPotenzaMultiselect() {
     html += '</div></div>';
     return html;
 }
-
-// CORREÇÃO DO BUG DO DROPDOWN: Marca que estava aberto e re-renderiza
-window.removePotenzaProduct = function(product, event) {
-    event.stopPropagation();
-    isMultiselectOpen = document.getElementById('potenza-multiselect-dropdown').classList.contains('open');
-
-    formData.produtosPotenzaInteresse = formData.produtosPotenzaInteresse.filter(p => p !== product);
-    renderQuestion(currentStep);
-};
 
 function renderCheckboxWithInputs(question) {
     let html = '<div class="checkbox-group">';
