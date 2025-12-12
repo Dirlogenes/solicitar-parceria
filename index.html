@@ -1,1 +1,48 @@
-<!DOCTYPE html><html lang="pt-BR"><head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Solicitação de Parceria - PHS</title> <link rel="stylesheet" href="style.css"> <script src="https://d335luupcnwy6.cloudfront.net/js/integration/2.0.0/rd-js-integration.min.js"></script></head><body> <div class="container"> <!-- Progress Bar --> <div class="progress-container"> <div class="progress-bar" id="progressBar"></div> </div> <!-- Form Container --> <div class="form-wrapper"> <form id="phsForm" novalidate> <!-- Questions will be dynamically inserted here --> <div id="questionsContainer"></div> </form> </div> <!-- Navigation Buttons --> <div class="navigation"> <button type="button" id="prevBtn" class="btn btn-secondary" style="display: none;"> <span>← Voltar</span> </button> <button type="button" id="nextBtn" class="btn btn-primary"> <span>Continuar →</span> </button> </div> </div> <!-- Success Message --> <div id="successMessage" class="success-container" style="display: none;"> <div class="success-content"> <div class="success-icon">✓</div> <h2>Obrigado pelo cadastro! 🙏</h2> <p>Nossa equipe irá avaliar e responder sua solicitação assim que possível.</p> <p>Fique de olho no e-mail e whatsapp cadastrados 😉</p> </div> </div> <!-- Loading Spinner --> <div id="loadingSpinner" class="loading-spinner" style="display: none;"> <div class="spinner"></div> <p>Enviando sua solicitação...</p> </div> <script src="script.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitação de Parceria - PHS</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d335luupcnwy6.cloudfront.net/js/integration/2.0.0/rd-js-integration.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="form-wrapper">
+            <form id="phsForm" novalidate>
+                <div id="questionsContainer"></div>
+            </form>
+        </div>
+        
+        <div class="navigation">
+            <button type="button" id="prevBtn" class="btn btn-secondary" style="display: none;">
+                <span>← Voltar</span>
+            </button>
+            <button type="button" id="nextBtn" class="btn btn-primary">
+                <span>Continuar →</span>
+            </button>
+        </div>
+    </div>
+    
+    <div id="successMessage" class="success-container" style="display: none;">
+        <div class="success-content">
+            <div class="success-icon">✓</div>
+            <h2>Obrigado pelo cadastro! 🙏</h2>
+            <p>Nossa equipe irá avaliar e responder sua solicitação assim que possível.</p>
+            <p>Fique de olho no e-mail e whatsapp cadastrados 😉</p>
+        </div>
+    </div>
+    
+    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+        <div class="spinner"></div>
+        <p>Enviando sua solicitação...</p>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
