@@ -325,7 +325,7 @@ function renderQuestion(step) {
     questionDiv.innerHTML = html;
     container.appendChild(questionDiv);
         
-    // Setup event listeners (AGORA DEVE FUNCIONAR)
+    // Setup event listeners (CORRIGIDO)
     setupQuestionListeners(question);
     
     // Configura Autocomplete
@@ -335,7 +335,6 @@ function renderQuestion(step) {
     
     // CORREÇÃO DO BUG: Reabre o multiselect se ele estava aberto antes da re-renderização
     if (isMultiselectOpen && (question.type === 'multiselect' || question.type === 'checkbox-with-multiselect')) {
-        // Usa setTimeout para garantir que a DOM foi construída
         setTimeout(() => {
             const dropdown = document.getElementById('multiselect-dropdown') || document.getElementById('potenza-multiselect-dropdown');
             if (dropdown) {
@@ -547,7 +546,6 @@ function getAvailableProducts() {
 // CORREÇÃO DO BUG DO DROPDOWN: Marca que estava aberto e re-renderiza
 window.removeProduct = function(product, event) {
     event.stopPropagation();
-    // Verifica e salva o estado do dropdown
     isMultiselectOpen = document.getElementById('multiselect-dropdown').classList.contains('open');
     
     formData.produtos = formData.produtos.filter(p => p !== product);
@@ -999,7 +997,6 @@ function setupNavigation() {
     // Lógica para avanço com ENTER no formulário
     form.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            const inputField = e.target;
             const autocompleteList = document.querySelector('.autocomplete-list');
             const isAutocompleteOpen = autocompleteList && autocompleteList.innerHTML.trim() !== '';
 
@@ -1085,7 +1082,7 @@ function validateCurrentQuestion() {
             break;
                 
         case 'checkbox-with-multiselect':
-            if (formData[question.field] === undefined || formData[question.field] === null) {
+            if (formData[question.field] === undefined || formData.question.field === null) {
                 isValid = false;
             } else if (formData.question.field === true && (!formData.produtosPotenzaInteresse || formData.produtosPotenzaInteresse.length === 0)) {
                 isValid = false;
@@ -1172,7 +1169,6 @@ function validateCourses() {
 
     return allCoursesValid;
 }
-
 
 // Email validation (Mantido)
 function isValidEmail(email) {
