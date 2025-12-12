@@ -433,6 +433,7 @@ function buildQuestions() {
             id: 'q3',
             number: 'Etapa 1',
             title: 'Qual é o seu Telefone/Whatsapp?',
+            subtitle: 'Informe com DDD',
             type: 'tel',
             field: 'cf_telefone_whatsapp',
             required: true,
@@ -440,7 +441,7 @@ function buildQuestions() {
         },
         {
             id: 'q4',
-            number: 'Etapa 1',
+            number: 'Eteta 1',
             title: 'Qual sua Cidade/UF?',
             type: 'text',
             field: 'cf_cidade_uf',
@@ -475,6 +476,7 @@ function buildQuestions() {
             id: 'q7',
             number: 'Etapa 2',
             title: 'Quais marcas da PHS você utiliza ou já utilizou na sua prática clínica ou em aulas?',
+            subtitle: 'Selecione uma ou mais opções',
             type: 'checkbox-exclusive',
             field: 'marcas',
             required: true,
@@ -498,6 +500,7 @@ function buildQuestions() {
             id: 'q8.3',
             number: 'Etapa 2',
             title: 'Qual o principal motivo de você ainda não ter utilizado nossa linha de produtos Potenza?',
+            subtitle: '(Clareadores, Dessensibilizantes, Condicionadores Ácidos, Pastas de Polimento, etc..)',
             type: 'radio-with-other',
             field: 'motivoPotenza',
             required: true,
@@ -552,6 +555,7 @@ function buildQuestions() {
             id: 'q11',
             number: 'Etapa 4',
             title: 'Cadastre um ou mais cursos/treinamentos que já realizou ou ainda irá realizar.',
+            subtitle: 'Se tiver mais de um tipo, cadastre ao menos um de cada como exemplo. Queremos entender melhor sobre o formato e como podemos ajudá-lo.',
             type: 'course-repeater',
             field: 'cursos',
             required: true,
@@ -963,7 +967,7 @@ function renderRadioWithInput(question) {
             html += `
                 <div class="conditional-input ${show}" id="input-exclusividade">
                     <p style="margin: 8px 0; font-size: 14px; color: var(--text-secondary);">${opt.inputLabel}</p>
-                    <input type="text" id="exclusividadeLista" value="${formData[question.field] || ''}" placeholder="Liste aqui...">
+                    <input type="text" id="exclusividadeLista" value="${formData.exclusividadeLista || ''}" placeholder="Liste aqui...">
                 </div>
             `;
         }
