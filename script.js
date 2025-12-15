@@ -192,13 +192,16 @@ function setupQuestionListeners(question) {
             });
         }
         
-        // CORREÇÃO Q8.3: Lógica para garantir que o campo "Outro" esteja visível na renderização inicial/volta.
-        if (formData[question.field] === 'outro') {
+        // REMOÇÃO DA LÓGICA REDUNDANTE/BUGADA DA CORREÇÃO ANTERIOR
+        // O input condicional jé deve aparecer se a classe 'show' foi gerada no renderInput,
+        // o que acontece se formData[question.field] === 'outro'.
+        /* if (formData[question.field] === 'outro') {
             const conditionalInput = document.getElementById(`input-outro`);
             if (conditionalInput) {
                 conditionalInput.classList.add('show');
             }
         }
+        */
     }
         
     if (question.type === 'checkbox-with-multiselect') {
