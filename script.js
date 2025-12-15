@@ -49,41 +49,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
 });
 
-// --- LÓGICA IBGE (LIVE SEARCH - IGUAL AO SEU EXEMPLO) ---
+// --- LÓGICA IBGE (CORRIGIDA: Carrega tudo e filtra localmente) ---
 function setupCityAutocomplete() {
     const cidadeInput = document.getElementById('city-input');
     const autocompleteBox = document.getElementById('city-suggestions');
-    let cidadesIBGE = [];
+    let todasAsCidades = []; // Vamos guardar as 5.570 cidades aqui
 
-    // Função de busca na API (Copiada e adaptada do seu exemplo)
-    async function buscarCidadesIBGE(termo) {
+    // 1. Buscar TODAS as cidades uma única vez ao iniciar
+    async function carregarBancoDeDadosIBGE() {
         try {
+            // Removemos o filtro da URL para pegar a lista completa
             const response = await fetch(
-                `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${termo}`
+                `https://servicodados.ibge.gov.br/api/v1/localidades/municipios`
             );
             const data = await response.json();
 
-            cidadesIBGE = data.map(cidade => ({
+            todasAsCidades = data.map(cidade => ({
                 nome: cidade.nome,
-                // Garantindo que o caminho da UF exista para evitar erros em casos raros
-                uf: (cidade.microrregiao && cidade.microrregiao.mesorregiao && cidade.microrregiao.mesorregiao.UF) 
-                    ? cidade.microrregiao.mesorregiao.UF.sigla 
-                    : 'BR'
+                // Simplifiquei a verificação da UF com 'optional chaining' (?.)
+                uf: cidade.microrregiao?.mesorregiao?.UF?.sigla || 'BR'
             }));
+            
+            console.log(`Carregadas ${todasAsCidades.length} cidades.`);
         } catch (error) {
             console.error("Erro ao buscar no IBGE:", error);
         }
     }
 
-    // Função de Renderização
-    function renderizarSugestoes() {
+    // Chama o carregamento imediatamente
+    carregarBancoDeDadosIBGE();
+
+    // 2. Função de Renderização (igual, mas recebe a lista filtrada)
+    function renderizarSugestoes(listaParaMostrar) {
         autocompleteBox.innerHTML = '';
         
-        if(cidadesIBGE.length > 0) {
+        if(listaParaMostrar.length > 0) {
             autocompleteBox.style.display = 'block';
             
-            // Limitamos a 8 sugestões como no seu exemplo
-            cidadesIBGE.slice(0, 8).forEach(cidade => {
+            // Limitamos a 8 sugestões
+            listaParaMostrar.slice(0, 8).forEach(cidade => {
                 const item = document.createElement('div');
                 item.classList.add('autocomplete-item');
                 item.textContent = `${cidade.nome} - ${cidade.uf}`;
@@ -92,7 +96,6 @@ function setupCityAutocomplete() {
                     cidadeInput.value = `${cidade.nome} - ${cidade.uf}`;
                     autocompleteBox.innerHTML = '';
                     autocompleteBox.style.display = 'none';
-                    // Remove erro visual se houver
                     cidadeInput.classList.remove('error-border');
                 });
 
@@ -103,22 +106,27 @@ function setupCityAutocomplete() {
         }
     }
 
-    // Listener de Digitação (Input)
-    cidadeInput.addEventListener('input', async () => {
-        const termo = cidadeInput.value.trim();
+    // 3. Listener de Digitação (Agora faz o filtro LOCAL)
+    cidadeInput.addEventListener('input', () => {
+        const termo = cidadeInput.value.toLowerCase().trim();
 
-        // Se limpar o campo, limpa a lista
+        // Se limpar o campo, esconde a lista
         if (termo.length === 0) {
             autocompleteBox.innerHTML = '';
             autocompleteBox.style.display = 'none';
             return;
         }
 
-        // Regra do seu código: Só busca com 3 caracteres ou mais
+        // Só filtra com 3 caracteres ou mais (opcional, mas bom para performance)
         if (termo.length < 3) return;
 
-        await buscarCidadesIBGE(termo);
-        renderizarSugestoes();
+        // --- AQUI ESTÁ A MÁGICA DO FILTRO ---
+        // Filtramos a lista 'todasAsCidades' que já carregamos
+        const cidadesFiltradas = todasAsCidades.filter(cidade => 
+            cidade.nome.toLowerCase().includes(termo)
+        );
+
+        renderizarSugestoes(cidadesFiltradas);
     });
 
     // Fechamento ao clicar fora
