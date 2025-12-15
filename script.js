@@ -50,9 +50,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupEventListeners();
     updateProgressBar();
+    
+    // Foca no primeiro campo ao carregar
+    setTimeout(() => document.getElementById('name').focus(), 100);
 });
 
-// --- CLASSE TAG INPUT (ATUALIZADA) ---
+// --- CLASSE TAG INPUT ---
 class TagInput {
     constructor(containerId, sourceData, isMulti) {
         this.container = document.getElementById(containerId);
@@ -70,7 +73,6 @@ class TagInput {
         this.container.innerHTML = '';
         this.container.className = 'tag-input-container';
         
-        // Render Tags Selecionadas
         this.selectedItems.forEach((item, index) => {
             const tag = document.createElement('div');
             tag.className = 'tag';
@@ -79,20 +81,14 @@ class TagInput {
             this.container.appendChild(tag);
         });
 
-        // Input
         if (this.isMulti || this.selectedItems.length === 0) {
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'tag-input-field';
-            // Placeholder muda se já houver itens ou não
             input.placeholder = this.selectedItems.length === 0 ? (this.isMulti ? 'Clique para selecionar...' : 'Digite ou selecione...') : '';
             
-            // --- EVENTOS PRINCIPAIS ---
-            
-            // Digitação: Filtra a lista
             input.oninput = (e) => this.handleInput(e);
             
-            // Teclado: Enter (add) e Backspace (remove)
             input.onkeydown = (e) => {
                 if(e.key === 'Enter') {
                     e.preventDefault();
@@ -107,19 +103,16 @@ class TagInput {
                 }
             };
 
-            // Foco: Mostra a lista completa (comportamento novo solicitado)
             input.onfocus = (e) => {
                 this.container.classList.add('focus');
-                this.handleInput(e); // Chama o filtro (com valor vazio = mostra tudo)
+                this.handleInput(e); 
             };
 
-            // Clique: Garante que a lista abre se clicar num input já focado
             input.onclick = (e) => {
-                e.stopPropagation(); // Evita conflitos com o click do container
+                e.stopPropagation();
                 this.handleInput(e);
             };
 
-            // Blur: Esconde a lista com delay (para dar tempo do clique no item funcionar)
             input.onblur = () => setTimeout(() => {
                 this.container.classList.remove('focus');
                 this.closeList();
@@ -141,13 +134,11 @@ class TagInput {
     handleInput(e) {
         const val = e.target.value.toLowerCase();
         
-        // Filtra: Mostra item se não estiver selecionado E (se texto vazio OU se texto bate com o item)
         if (this.sourceData.length > 0) {
             const matches = this.sourceData.filter(item => 
                 !this.selectedItems.includes(item) && 
                 (val === '' || item.toLowerCase().includes(val))
             ); 
-            // Removido o .slice(0, 10) para permitir rolar a lista completa
 
             if (matches.length > 0) {
                 this.listContainer.innerHTML = '';
@@ -160,7 +151,7 @@ class TagInput {
                     this.listContainer.appendChild(div);
                 });
             } else {
-                this.closeList(); // Se não houver matches (ex: digitou algo nada a ver)
+                this.closeList();
             }
         }
     }
@@ -172,10 +163,8 @@ class TagInput {
             this.selectedItems = [item];
         }
         this.render();
-        // Mantém foco para continuar selecionando se for multi
         if(this.isMulti && this.inputElement) {
             this.inputElement.focus();
-            // Pequeno timeout para reabrir a lista atualizada (sem o item recém adicionado)
             setTimeout(() => this.handleInput({ target: this.inputElement }), 10);
         }
     }
@@ -202,7 +191,7 @@ function setupEventListeners() {
     document.querySelectorAll('.btn-prev').forEach(btn => btn.addEventListener('click', prevStep));
     document.querySelector('.btn-submit').addEventListener('click', submitForm);
 
-    // Q7 - Marcas
+    // Eventos de Checkbox/Radio...
     const brandChecks = document.querySelectorAll('#brands-group input');
     const noneCheck = document.getElementById('chk-brand-none');
     brandChecks.forEach(chk => {
@@ -216,7 +205,6 @@ function setupEventListeners() {
         });
     });
 
-    // Q9 - Motivo Potenza Outro
     const radioOtherPotenza = document.getElementById('radio-potenza-other');
     const inputOtherPotenza = document.getElementById('potenza-reason-other');
     document.querySelectorAll('input[name="potenza_reason"]').forEach(r => {
@@ -226,7 +214,6 @@ function setupEventListeners() {
         });
     });
 
-    // Q10 - Interesse Potenza
     const radioInterestSim = document.getElementById('radio-interest-sim');
     const tagsInterest = document.getElementById('potenza-interest-tags');
     document.querySelectorAll('input[name="potenza_interest"]').forEach(r => {
@@ -236,7 +223,6 @@ function setupEventListeners() {
         });
     });
 
-    // Q11 - Parcerias Ativas
     const chkDentais = document.getElementById('chk-dentais');
     const inpDentais = document.getElementById('input-dentais');
     const chkEmpresas = document.getElementById('chk-empresas');
@@ -258,7 +244,6 @@ function setupEventListeners() {
         }
     });
 
-    // Q12 - Exclusividade
     const radioExclSim = document.getElementById('radio-excl-sim');
     const inpExcl = document.getElementById('input-exclusivity');
     document.querySelectorAll('input[name="exclusivity"]').forEach(r => {
@@ -268,12 +253,10 @@ function setupEventListeners() {
         });
     });
 
-    // Q13 - Cursos (Eventos)
     document.getElementById('btn-show-course-form').addEventListener('click', showCourseForm);
     document.getElementById('btn-save-course').addEventListener('click', addCourse);
     document.getElementById('btn-cancel-course').addEventListener('click', hideCourseForm);
     
-    // Toggle campo "Outro" no Tipo de Curso
     const chkCtypeOther = document.getElementById('chk-ctype-other');
     const inpCtypeOther = document.getElementById('c-type-other-text');
     chkCtypeOther.addEventListener('change', () => {
@@ -319,9 +302,18 @@ function prevStep() {
 
 function goToStep(stepIndex) {
     document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
-    document.querySelector(`.step[data-step="${stepIndex}"]`).classList.remove('hidden');
+    
+    const nextStepDiv = document.querySelector(`.step[data-step="${stepIndex}"]`);
+    nextStepDiv.classList.remove('hidden');
+    
     currentStep = stepIndex;
     updateProgressBar();
+
+    // AUTO-FOCUS: Encontra o primeiro input visível e foca
+    const firstInput = nextStepDiv.querySelector('input, textarea, select');
+    if (firstInput) {
+        setTimeout(() => firstInput.focus(), 100);
+    }
 }
 
 function getNextStepIndex(current) {
@@ -482,13 +474,16 @@ function validateStep(step) {
 
 // --- LÓGICA DE CURSOS ---
 function showCourseForm() {
-    editingCourseIndex = -1; // Modo Criação
+    editingCourseIndex = -1; 
     document.getElementById('form-course-title').innerText = "Adicionar Novo Curso";
     document.getElementById('btn-save-course').innerText = "Salvar Curso";
     clearCourseForm();
     document.getElementById('btn-show-course-form').classList.add('hidden');
     document.getElementById('course-form-container').classList.remove('hidden');
     document.getElementById('course-add-error').style.display = 'none';
+
+    // Foca no nome do curso ao abrir
+    setTimeout(() => document.getElementById('c-name').focus(), 100);
 }
 
 function hideCourseForm() {
@@ -499,14 +494,12 @@ function hideCourseForm() {
 function clearCourseForm() {
     document.getElementById('c-name').value = '';
     
-    // Clear Checks
     document.querySelectorAll('#c-type-group input[type="checkbox"]').forEach(c => c.checked = false);
     document.getElementById('c-type-other-text').value = '';
     document.getElementById('c-type-other-text').classList.add('hidden');
 
     document.getElementById('c-region').value = '';
     
-    // Clear Radios
     const radioFreq = document.querySelector('input[name="c_freq"]:checked');
     if(radioFreq) radioFreq.checked = false;
 
@@ -520,7 +513,6 @@ function addCourse() {
     // 1. Coleta e Validação
     const name = document.getElementById('c-name').value.trim();
     
-    // Tipos
     const types = [];
     document.querySelectorAll('#c-type-group input:checked').forEach(c => {
         if(c.value === 'Outro') {
@@ -533,7 +525,6 @@ function addCourse() {
 
     const region = document.getElementById('c-region').value.trim();
     
-    // Frequência
     let freq = "";
     const freqOpt = document.querySelector('input[name="c_freq"]:checked');
     if(freqOpt) freq = freqOpt.value;
@@ -543,8 +534,9 @@ function addCourse() {
     const linkDiv = document.getElementById('c-link-divulgacao').value.trim();
     const linkCont = document.getElementById('c-link-conteudo').value.trim();
 
-    // Validação mínima: Nome e Tipo são essenciais
-    if (name === '' || types.length === 0) {
+    // Validação de Campos Obrigatórios
+    // Nome, Tipo, Região, Frequência, Duração, Alunos são obrigatórios
+    if (name === '' || types.length === 0 || region === '' || freq === '' || duration === '' || students === '') {
         document.getElementById('course-add-error').style.display = 'block';
         return;
     }
@@ -560,12 +552,9 @@ function addCourse() {
         linkCont
     };
 
-    // 2. Salvar (Novo ou Edição)
     if (editingCourseIndex >= 0) {
-        // Atualiza existente
         formData.courses[editingCourseIndex] = courseData;
     } else {
-        // Adiciona novo
         formData.courses.push(courseData);
     }
 
@@ -592,7 +581,6 @@ function renderCourses() {
         list.appendChild(div);
     });
 
-    // Atualiza texto do botão se houver cursos
     const btnAdd = document.getElementById('btn-show-course-form');
     if(formData.courses.length > 0) {
         btnAdd.innerText = "+ Adicionar outro curso";
@@ -602,7 +590,7 @@ function renderCourses() {
     }
 }
 
-// Funções Globais (para onclick no HTML)
+// Funções Globais
 window.removeCourse = function(index) {
     if(confirm("Tem certeza que deseja excluir este curso?")) {
         formData.courses.splice(index, 1);
@@ -614,18 +602,15 @@ window.editCourse = function(index) {
     const c = formData.courses[index];
     editingCourseIndex = index;
 
-    // Preencher Formulário
     document.getElementById('c-name').value = c.name;
 
-    // Types Checkbox
     document.querySelectorAll('#c-type-group input[type="checkbox"]').forEach(chk => {
-        chk.checked = false; // reset
+        chk.checked = false; 
         if(chk.value !== 'Outro' && c.types.includes(chk.value)) {
             chk.checked = true;
         }
     });
 
-    // Tratar "Outro"
     const otherType = c.types.find(t => t.startsWith('Outro: '));
     const chkOther = document.getElementById('chk-ctype-other');
     const inpOther = document.getElementById('c-type-other-text');
@@ -641,7 +626,6 @@ window.editCourse = function(index) {
 
     document.getElementById('c-region').value = c.region;
 
-    // Frequency Radio
     const radios = document.getElementsByName('c_freq');
     radios.forEach(r => {
         if(r.value === c.freq) r.checked = true;
@@ -653,7 +637,6 @@ window.editCourse = function(index) {
     document.getElementById('c-link-divulgacao').value = c.linkDiv;
     document.getElementById('c-link-conteudo').value = c.linkCont;
 
-    // UI Updates
     document.getElementById('form-course-title').innerText = "Editar Curso";
     document.getElementById('btn-save-course').innerText = "Atualizar Curso";
     document.getElementById('btn-show-course-form').classList.add('hidden');
@@ -673,7 +656,6 @@ async function submitForm() {
 
     document.getElementById('loading-overlay').classList.remove('hidden');
 
-    // Coleta Dados
     const name = document.getElementById('name').value;
     const email = document.getElementById('email').value;
     const phone = document.getElementById('phone').value;
@@ -712,7 +694,6 @@ async function submitForm() {
     }
     const strParcerias = parceriasAtivas.join(' | ');
 
-    // Formatar Cursos para String
     let strCursos = "";
     if(formData.courses.length > 0) {
         strCursos = formData.courses.map(c => 
