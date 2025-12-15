@@ -165,6 +165,8 @@ function setupQuestionListeners(question) {
         
     if (question.type === 'radio-with-other') {
         const radios = document.querySelectorAll(`input[name="${question.field}"]`);
+        
+        // CORREÇÃO Q8.3: Adiciona o listener de mudança
         radios.forEach(radio => {
             radio.addEventListener('change', (e) => {
                 formData[question.field] = e.target.value;
@@ -181,12 +183,21 @@ function setupQuestionListeners(question) {
                 }
             });
         });
-                
+        
+        // CORREÇÃO Q8.3: Adiciona um listener de input para o campo "Outro"
         const otherInput = document.getElementById(`${question.field}-outro`);
         if (otherInput) {
             otherInput.addEventListener('input', (e) => {
                 formData.motivoPotenzaOutro = e.target.value;
             });
+        }
+        
+        // CORREÇÃO Q8.3: Lógica para garantir que o campo "Outro" esteja visível na renderização inicial/volta.
+        if (formData[question.field] === 'outro') {
+            const conditionalInput = document.getElementById(`input-outro`);
+            if (conditionalInput) {
+                conditionalInput.classList.add('show');
+            }
         }
     }
         
