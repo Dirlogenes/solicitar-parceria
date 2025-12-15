@@ -22,121 +22,115 @@ const productsNicTone = ["Lençol de borracha para isolamento absoluto Nic Tone"
 
 // --- VARIÁVEIS DE ESTADO ---
 let currentStep = 1;
-let formData = {
-    courses: []
-};
-let editingCourseIndex = -1; // -1 significa novo curso
-
-// Variável Global para Cidades (Cache)
-let allCitiesList = []; 
+let formData = { courses: [] };
+let editingCourseIndex = -1;
 
 // Componentes
 let tagInputProducts, tagInputPotenzaInterest;
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Carregar Cidades IBGE imediatamente (Prefetch)
-    await carregarCidadesIBGE();
-
-    // 2. Inicializar Componentes
+    
+    // 1. Inicializar Componentes de Tags
     tagInputProducts = new TagInput('products-tag-input-wrapper', [], true);
     tagInputPotenzaInterest = new TagInput('potenza-interest-wrapper', productsPotenza, true);
 
-    // 3. Configurar Autocomplete da Cidade (usando a lista carregada)
+    // 2. Configurar Autocomplete da Cidade (USANDO SUA LÓGICA DE FETCH)
     setupCityAutocomplete();
 
-    // 4. Listeners e Layout
+    // 3. Listeners e Layout
     setupEventListeners();
     updateProgressBar();
     
     // Foca no primeiro campo
-    setTimeout(() => document.getElementById('name').focus(), 100);
+    setTimeout(() => {
+        const nameInput = document.getElementById('name');
+        if(nameInput) nameInput.focus();
+    }, 100);
 });
 
-// --- LÓGICA IBGE (PREFETCH) ---
-async function carregarCidadesIBGE() {
-    try {
-        // Busca todas as cidades de uma vez (~200kb)
-        const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios');
-        const data = await response.json();
-        
-        // Mapeia para um formato simples e guarda na memória
-        allCitiesList = data.map(cidade => ({
-            nome: cidade.nome,
-            uf: cidade.microrregiao.mesorregiao.UF.sigla,
-            textoCompleto: `${cidade.nome} - ${cidade.microrregiao.mesorregiao.UF.sigla}`
-        }));
-        
-        console.log(`Sucesso: ${allCitiesList.length} cidades carregadas.`);
-    } catch (error) {
-        console.error("Erro ao carregar API do IBGE:", error);
-        // Se falhar, a lista fica vazia e o usuário digita manualmente sem autocomplete
-    }
-}
-
+// --- LÓGICA IBGE (LIVE SEARCH - IGUAL AO SEU EXEMPLO) ---
 function setupCityAutocomplete() {
-    const cityInput = document.getElementById('city-input');
-    const suggestionsBox = document.getElementById('city-suggestions');
+    const cidadeInput = document.getElementById('city-input');
+    const autocompleteBox = document.getElementById('city-suggestions');
+    let cidadesIBGE = [];
 
-    // Função de filtro local (muito rápida)
-    function filtrarCidades(termo) {
-        if (!termo || termo.length < 3) {
-            suggestionsBox.style.display = 'none';
+    // Função de busca na API (Copiada e adaptada do seu exemplo)
+    async function buscarCidadesIBGE(termo) {
+        try {
+            const response = await fetch(
+                `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${termo}`
+            );
+            const data = await response.json();
+
+            cidadesIBGE = data.map(cidade => ({
+                nome: cidade.nome,
+                // Garantindo que o caminho da UF exista para evitar erros em casos raros
+                uf: (cidade.microrregiao && cidade.microrregiao.mesorregiao && cidade.microrregiao.mesorregiao.UF) 
+                    ? cidade.microrregiao.mesorregiao.UF.sigla 
+                    : 'BR'
+            }));
+        } catch (error) {
+            console.error("Erro ao buscar no IBGE:", error);
+        }
+    }
+
+    // Função de Renderização
+    function renderizarSugestoes() {
+        autocompleteBox.innerHTML = '';
+        
+        if(cidadesIBGE.length > 0) {
+            autocompleteBox.style.display = 'block';
+            
+            // Limitamos a 8 sugestões como no seu exemplo
+            cidadesIBGE.slice(0, 8).forEach(cidade => {
+                const item = document.createElement('div');
+                item.classList.add('autocomplete-item');
+                item.textContent = `${cidade.nome} - ${cidade.uf}`;
+
+                item.addEventListener('click', () => {
+                    cidadeInput.value = `${cidade.nome} - ${cidade.uf}`;
+                    autocompleteBox.innerHTML = '';
+                    autocompleteBox.style.display = 'none';
+                    // Remove erro visual se houver
+                    cidadeInput.classList.remove('error-border');
+                });
+
+                autocompleteBox.appendChild(item);
+            });
+        } else {
+            autocompleteBox.style.display = 'none';
+        }
+    }
+
+    // Listener de Digitação (Input)
+    cidadeInput.addEventListener('input', async () => {
+        const termo = cidadeInput.value.trim();
+
+        // Se limpar o campo, limpa a lista
+        if (termo.length === 0) {
+            autocompleteBox.innerHTML = '';
+            autocompleteBox.style.display = 'none';
             return;
         }
 
-        const termoLimpo = termo.toLowerCase();
-        
-        // Filtra na lista que já está na memória
-        const filtradas = allCitiesList.filter(c => 
-            c.nome.toLowerCase().includes(termoLimpo)
-        ).slice(0, 8); // Pega só as 8 primeiras para não travar a tela
+        // Regra do seu código: Só busca com 3 caracteres ou mais
+        if (termo.length < 3) return;
 
-        renderizar(filtradas);
-    }
-
-    function renderizar(lista) {
-        suggestionsBox.innerHTML = '';
-        
-        if (lista.length > 0) {
-            suggestionsBox.style.display = 'block';
-            lista.forEach(item => {
-                const div = document.createElement('div');
-                div.classList.add('autocomplete-item');
-                div.textContent = item.textoCompleto;
-                
-                div.addEventListener('click', () => {
-                    cityInput.value = item.textoCompleto;
-                    suggestionsBox.style.display = 'none';
-                    suggestionsBox.innerHTML = '';
-                    // Remove erro se houver
-                    cityInput.classList.remove('error-border');
-                    const err = cityInput.parentElement.querySelector('.error-msg');
-                    if(err) err.style.display = 'none';
-                });
-
-                suggestionsBox.appendChild(div);
-            });
-        } else {
-            suggestionsBox.style.display = 'none';
-        }
-    }
-
-    // Evento de Digitação
-    cityInput.addEventListener('input', () => {
-        const termo = cityInput.value;
-        filtrarCidades(termo);
+        await buscarCidadesIBGE(termo);
+        renderizarSugestoes();
     });
 
-    // Fechar ao clicar fora
+    // Fechamento ao clicar fora
     document.addEventListener('click', e => {
-        if (!cityInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-            suggestionsBox.style.display = 'none';
+        if (!cidadeInput.contains(e.target) && !autocompleteBox.contains(e.target)) {
+            autocompleteBox.innerHTML = '';
+            autocompleteBox.style.display = 'none';
         }
     });
 }
 
-// --- CLASSE TAG INPUT ---
+// --- CLASSE TAG INPUT (Manter funcionalidade de produtos) ---
 class TagInput {
     constructor(containerId, sourceData, isMulti) {
         this.container = document.getElementById(containerId);
@@ -169,7 +163,6 @@ class TagInput {
             input.placeholder = this.selectedItems.length === 0 ? (this.isMulti ? 'Clique para selecionar...' : 'Digite ou selecione...') : '';
             
             input.oninput = (e) => this.handleInput(e);
-            
             input.onkeydown = (e) => {
                 if(e.key === 'Enter') {
                     e.preventDefault();
@@ -183,13 +176,11 @@ class TagInput {
                     this.remove(this.selectedItems.length - 1);
                 }
             };
-
             input.onfocus = (e) => {
                 this.container.classList.add('focus');
                 this.handleInput(e); 
             };
             input.onclick = (e) => { e.stopPropagation(); this.handleInput(e); };
-
             input.onblur = () => setTimeout(() => {
                 this.container.classList.remove('focus');
                 this.closeList();
@@ -202,7 +193,6 @@ class TagInput {
         this.listContainer = document.createElement('div');
         this.listContainer.className = 'autocomplete-list';
         this.container.appendChild(this.listContainer);
-
         this.container.onclick = (e) => {
             if (e.target === this.container && this.inputElement) this.inputElement.focus();
         };
@@ -215,7 +205,6 @@ class TagInput {
                 !this.selectedItems.includes(item) && 
                 (val === '' || item.toLowerCase().includes(val))
             ); 
-
             if (matches.length > 0) {
                 this.listContainer.innerHTML = '';
                 this.listContainer.style.display = 'block';
@@ -226,18 +215,13 @@ class TagInput {
                     div.onclick = () => this.add(match);
                     this.listContainer.appendChild(div);
                 });
-            } else {
-                this.closeList();
-            }
+            } else { this.closeList(); }
         }
     }
 
     add(item) {
-        if (this.isMulti) {
-            this.selectedItems.push(item);
-        } else {
-            this.selectedItems = [item];
-        }
+        if (this.isMulti) this.selectedItems.push(item);
+        else this.selectedItems = [item];
         this.render();
         if(this.isMulti && this.inputElement) {
             this.inputElement.focus();
@@ -252,21 +236,17 @@ class TagInput {
         }
     }
 
-    closeList() {
-        this.listContainer.style.display = 'none';
-    }
-
-    getValue() {
-        return this.isMulti ? this.selectedItems : (this.selectedItems[0] || '');
-    }
+    closeList() { this.listContainer.style.display = 'none'; }
+    getValue() { return this.isMulti ? this.selectedItems : (this.selectedItems[0] || ''); }
 }
 
-// --- EVENTOS ---
+// --- EVENTOS E NAVEGAÇÃO ---
 function setupEventListeners() {
     document.querySelectorAll('.btn-next').forEach(btn => btn.addEventListener('click', nextStep));
     document.querySelectorAll('.btn-prev').forEach(btn => btn.addEventListener('click', prevStep));
     document.querySelector('.btn-submit').addEventListener('click', submitForm);
 
+    // Configuração dos Checkboxes e Radios
     const brandChecks = document.querySelectorAll('#brands-group input');
     const noneCheck = document.getElementById('chk-brand-none');
     brandChecks.forEach(chk => {
@@ -280,23 +260,9 @@ function setupEventListeners() {
         });
     });
 
-    const radioOtherPotenza = document.getElementById('radio-potenza-other');
-    const inputOtherPotenza = document.getElementById('potenza-reason-other');
-    document.querySelectorAll('input[name="potenza_reason"]').forEach(r => {
-        r.addEventListener('change', () => {
-            if(radioOtherPotenza.checked) inputOtherPotenza.classList.remove('hidden');
-            else inputOtherPotenza.classList.add('hidden');
-        });
-    });
-
-    const radioInterestSim = document.getElementById('radio-interest-sim');
-    const tagsInterest = document.getElementById('potenza-interest-tags');
-    document.querySelectorAll('input[name="potenza_interest"]').forEach(r => {
-        r.addEventListener('change', () => {
-            if(radioInterestSim.checked) tagsInterest.classList.remove('hidden');
-            else tagsInterest.classList.add('hidden');
-        });
-    });
+    setupConditionalDisplay('radio-potenza-other', 'potenza-reason-other', 'potenza_reason');
+    setupConditionalDisplay('radio-interest-sim', 'potenza-interest-tags', 'potenza_interest');
+    setupConditionalDisplay('radio-excl-sim', 'input-exclusivity', 'exclusivity');
 
     const chkDentais = document.getElementById('chk-dentais');
     const inpDentais = document.getElementById('input-dentais');
@@ -304,14 +270,9 @@ function setupEventListeners() {
     const inpEmpresas = document.getElementById('input-empresas');
     const chkNone = document.getElementById('chk-no-partners');
 
-    chkDentais.addEventListener('change', () => {
-        if(chkDentais.checked) { inpDentais.classList.remove('hidden'); chkNone.checked = false; }
-        else inpDentais.classList.add('hidden');
-    });
-    chkEmpresas.addEventListener('change', () => {
-        if(chkEmpresas.checked) { inpEmpresas.classList.remove('hidden'); chkNone.checked = false; }
-        else inpEmpresas.classList.add('hidden');
-    });
+    chkDentais.addEventListener('change', () => toggleInput(chkDentais, inpDentais, chkNone));
+    chkEmpresas.addEventListener('change', () => toggleInput(chkEmpresas, inpEmpresas, chkNone));
+    
     chkNone.addEventListener('change', () => {
         if(chkNone.checked) {
             chkDentais.checked = false; inpDentais.classList.add('hidden');
@@ -319,15 +280,7 @@ function setupEventListeners() {
         }
     });
 
-    const radioExclSim = document.getElementById('radio-excl-sim');
-    const inpExcl = document.getElementById('input-exclusivity');
-    document.querySelectorAll('input[name="exclusivity"]').forEach(r => {
-        r.addEventListener('change', () => {
-            if(radioExclSim.checked) inpExcl.classList.remove('hidden');
-            else inpExcl.classList.add('hidden');
-        });
-    });
-
+    // Cursos
     document.getElementById('btn-show-course-form').addEventListener('click', showCourseForm);
     document.getElementById('btn-save-course').addEventListener('click', addCourse);
     document.getElementById('btn-cancel-course').addEventListener('click', hideCourseForm);
@@ -340,10 +293,24 @@ function setupEventListeners() {
     });
 }
 
+function setupConditionalDisplay(triggerId, targetId, radioName) {
+    const trigger = document.getElementById(triggerId);
+    const target = document.getElementById(targetId);
+    document.querySelectorAll(`input[name="${radioName}"]`).forEach(r => {
+        r.addEventListener('change', () => {
+            if(trigger.checked) target.classList.remove('hidden');
+            else target.classList.add('hidden');
+        });
+    });
+}
+function toggleInput(chk, inp, chkNone) {
+    if(chk.checked) { inp.classList.remove('hidden'); chkNone.checked = false; }
+    else inp.classList.add('hidden');
+}
+
 function updateProductSource() {
     let source = [];
     const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
-    
     if (brands.includes("Ainda não utilizei")) {
         source = [...productsTokuyama, ...productsPotenza, ...productsNicTone];
     } else {
@@ -358,10 +325,7 @@ function updateProductSource() {
 function nextStep() {
     if (validateStep(currentStep)) {
         const next = getNextStepIndex(currentStep);
-        if (next > 13) {
-            submitForm(); 
-            return;
-        }
+        if (next > 13) { submitForm(); return; }
         goToStep(next);
     } else {
         const currentDiv = document.querySelector(`.step[data-step="${currentStep}"]`);
@@ -369,179 +333,122 @@ function nextStep() {
         setTimeout(() => currentDiv.classList.remove('shake'), 500);
     }
 }
-
 function prevStep() {
     const prev = getPrevStepIndex(currentStep);
     goToStep(prev);
 }
-
 function goToStep(stepIndex) {
     document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
-    
     const nextStepDiv = document.querySelector(`.step[data-step="${stepIndex}"]`);
     nextStepDiv.classList.remove('hidden');
-    
     currentStep = stepIndex;
     updateProgressBar();
-
     const firstInput = nextStepDiv.querySelector('input, textarea, select');
-    if (firstInput) {
-        setTimeout(() => firstInput.focus(), 100);
-    }
+    if (firstInput) setTimeout(() => firstInput.focus(), 100);
 }
-
 function getNextStepIndex(current) {
-    let next = current + 1;
     if (current === 8) { 
         const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
-        const isFirstTime = brands.includes("Ainda não utilizei");
-        const hasPotenza = brands.includes("Potenza");
-        
-        if (!hasPotenza && !isFirstTime) return 9;
-        else return 11;
+        if (!brands.includes("Potenza") && !brands.includes("Ainda não utilizei")) return 9;
+        return 11;
     }
     if (current === 9) return 10;
     if (current === 10) return 11;
     if (current === 11) {
-            const hasNone = document.getElementById('chk-no-partners').checked;
-            if (hasNone) return checkCoursesStep(12);
-            return 12; 
+         if (document.getElementById('chk-no-partners').checked) return checkCoursesStep(12);
+         return 12;
     }
     if (current === 12) return checkCoursesStep(12);
-
-    return next;
+    return current + 1;
 }
-
 function checkCoursesStep(fromStep) {
-    const hasCourses = document.getElementById('chk-cursos').checked;
-    if (hasCourses) return 13;
-    submitForm();
-    return fromStep;
+    return document.getElementById('chk-cursos').checked ? 13 : (submitForm(), fromStep);
 }
-
 function getPrevStepIndex(current) {
-    if (current === 13) {
-        const hasPartners = !document.getElementById('chk-no-partners').checked;
-        return hasPartners ? 12 : 11;
-    }
+    if (current === 13) return document.getElementById('chk-no-partners').checked ? 11 : 12;
     if (current === 12) return 11;
     if (current === 11) {
-            const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
-            const isFirstTime = brands.includes("Ainda não utilizei");
-            const hasPotenza = brands.includes("Potenza");
-            if (!hasPotenza && !isFirstTime) return 10;
-            return 8;
+        const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
+        if (!brands.includes("Potenza") && !brands.includes("Ainda não utilizei")) return 10;
+        return 8;
     }
     if (current === 10) return 9;
     if (current === 9) return 8;
     return current - 1;
 }
-
 function updateProgressBar() {
-    const totalSteps = 13;
-    const pct = (currentStep / totalSteps) * 100;
-    document.getElementById('progress-bar').style.width = `${pct}%`;
+    document.getElementById('progress-bar').style.width = `${(currentStep / 13) * 100}%`;
 }
 
 // --- VALIDAÇÃO ---
 function validateStep(step) {
     let valid = true;
     const stepDiv = document.querySelector(`.step[data-step="${step}"]`);
-    
-    const setError = (el, msg, isShow) => {
+    const setError = (el, isValid) => {
         const err = el.parentElement.querySelector('.error-msg') || el.querySelector('.error-msg') || stepDiv.querySelector('.error-msg');
-        if(err) err.style.display = isShow ? 'block' : 'none';
+        if(err) err.style.display = isValid ? 'none' : 'block';
         if(el.tagName === 'INPUT') {
-            if(isShow) el.classList.add('error-border');
+            if(!isValid) el.classList.add('error-border');
             else el.classList.remove('error-border');
         }
     };
 
-    // Validações por passo
     if (step === 1) { 
-        const val = document.getElementById('name').value.trim();
-        valid = val !== '';
-        setError(document.getElementById('name'), null, !valid);
+        const el = document.getElementById('name'); valid = el.value.trim() !== ''; setError(el, valid); 
     }
     if (step === 2) { 
-        const val = document.getElementById('email').value.trim();
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        valid = regex.test(val);
-        setError(document.getElementById('email'), null, !valid);
+        const el = document.getElementById('email'); valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim()); setError(el, valid); 
     }
     if (step === 3) { 
-        const val = document.getElementById('phone').value.replace(/\D/g, '');
-        valid = val.length >= 8;
-        setError(document.getElementById('phone'), null, !valid);
+        const el = document.getElementById('phone'); valid = el.value.replace(/\D/g, '').length >= 8; setError(el, valid); 
     }
     if (step === 4) { 
-        // Validação da Cidade
-        const val = document.getElementById('city-input').value.trim();
-        valid = val !== '';
-        setError(document.getElementById('city-input'), null, !valid);
+        const el = document.getElementById('city-input'); valid = el.value.trim() !== ''; setError(el, valid); 
     }
     if (step === 5) { 
-        const val = document.getElementById('instagram').value.trim();
-        valid = val !== '';
-        setError(document.getElementById('instagram'), null, !valid);
+        const el = document.getElementById('instagram'); valid = el.value.trim() !== ''; setError(el, valid); 
     }
     if (step === 6) { 
-        const checked = document.querySelectorAll('#partnership-type-group input:checked').length > 0;
-        valid = checked;
-        setError(document.getElementById('partnership-type-group'), null, !valid);
+        const el = document.getElementById('partnership-type-group'); valid = el.querySelectorAll('input:checked').length > 0; setError(el, valid); 
     }
     if (step === 7) { 
-        const checked = document.querySelectorAll('#brands-group input:checked').length > 0;
-        valid = checked;
-        setError(document.getElementById('brands-group'), null, !valid);
+        const el = document.getElementById('brands-group'); valid = el.querySelectorAll('input:checked').length > 0; setError(el, valid); 
     }
     if (step === 8) { 
-        const tags = tagInputProducts.getValue();
-        valid = tags.length > 0;
-        const err = document.getElementById('err-p8');
-        err.style.display = valid ? 'none' : 'block';
-        if(!valid) document.getElementById('products-tag-input-wrapper').classList.add('error-border');
-        else document.getElementById('products-tag-input-wrapper').classList.remove('error-border');
+        valid = tagInputProducts.getValue().length > 0; 
+        document.getElementById('err-p8').style.display = valid ? 'none' : 'block';
+        const wrap = document.getElementById('products-tag-input-wrapper');
+        if(!valid) wrap.classList.add('error-border'); else wrap.classList.remove('error-border');
     }
     if (step === 9) { 
-        const checked = document.querySelector('input[name="potenza_reason"]:checked');
-        valid = !!checked;
-        if(valid && checked.value === 'Outro') {
-            if(document.getElementById('potenza-reason-other').value.trim() === '') valid = false;
-        }
-        setError(document.getElementById('potenza-reason-group'), null, !valid);
+        const chk = document.querySelector('input[name="potenza_reason"]:checked');
+        valid = !!chk;
+        if(valid && chk.value === 'Outro' && document.getElementById('potenza-reason-other').value.trim() === '') valid = false;
+        setError(document.getElementById('potenza-reason-group'), valid);
     }
     if (step === 10) { 
-        const checked = document.querySelector('input[name="potenza_interest"]:checked');
-        valid = !!checked;
-        if(valid && checked.value === 'Sim') {
-            if(tagInputPotenzaInterest.getValue().length === 0) valid = false;
-        }
-        setError(document.getElementById('potenza-interest-bool'), null, !valid);
+        const chk = document.querySelector('input[name="potenza_interest"]:checked');
+        valid = !!chk;
+        if(valid && chk.value === 'Sim' && tagInputPotenzaInterest.getValue().length === 0) valid = false;
+        setError(document.getElementById('potenza-interest-bool'), valid);
     }
-    if (step === 11) { 
-        const dentais = document.getElementById('chk-dentais').checked;
-        const empresas = document.getElementById('chk-empresas').checked;
-        const none = document.getElementById('chk-no-partners').checked;
-        valid = dentais || empresas || none;
-        if(dentais && document.getElementById('input-dentais').value.trim() === '') valid = false;
-        if(empresas && document.getElementById('input-empresas').value.trim() === '') valid = false;
-        setError(document.getElementById('active-partnerships-group'), null, !valid);
+    if (step === 11) {
+        const validGroup = document.getElementById('chk-dentais').checked || document.getElementById('chk-empresas').checked || document.getElementById('chk-no-partners').checked;
+        valid = validGroup;
+        if(document.getElementById('chk-dentais').checked && document.getElementById('input-dentais').value.trim() === '') valid = false;
+        if(document.getElementById('chk-empresas').checked && document.getElementById('input-empresas').value.trim() === '') valid = false;
+        setError(document.getElementById('active-partnerships-group'), valid);
     }
-    if (step === 12) { 
-        const checked = document.querySelector('input[name="exclusivity"]:checked');
-        valid = !!checked;
-        if(valid && checked.value === 'Sim') {
-            if(document.getElementById('input-exclusivity').value.trim() === '') valid = false;
-        }
-        setError(document.getElementById('exclusivity-group'), null, !valid);
+    if (step === 12) {
+        const chk = document.querySelector('input[name="exclusivity"]:checked');
+        valid = !!chk;
+        if(valid && chk.value === 'Sim' && document.getElementById('input-exclusivity').value.trim() === '') valid = false;
+        setError(document.getElementById('exclusivity-group'), valid);
     }
-    if (step === 13) { 
+    if (step === 13) {
         valid = formData.courses.length > 0;
-        const err = document.getElementById('course-list-error');
-        err.style.display = valid ? 'none' : 'block';
+        document.getElementById('course-list-error').style.display = valid ? 'none' : 'block';
     }
-
     return valid;
 }
 
@@ -554,241 +461,146 @@ function showCourseForm() {
     document.getElementById('btn-show-course-form').classList.add('hidden');
     document.getElementById('course-form-container').classList.remove('hidden');
     document.getElementById('course-add-error').style.display = 'none';
-
     setTimeout(() => document.getElementById('c-name').focus(), 100);
 }
-
 function hideCourseForm() {
     document.getElementById('course-form-container').classList.add('hidden');
     document.getElementById('btn-show-course-form').classList.remove('hidden');
 }
-
 function clearCourseForm() {
     document.getElementById('c-name').value = '';
-    document.querySelectorAll('#c-type-group input[type="checkbox"]').forEach(c => c.checked = false);
+    document.querySelectorAll('#c-type-group input').forEach(c => c.checked = false);
     document.getElementById('c-type-other-text').value = '';
     document.getElementById('c-type-other-text').classList.add('hidden');
     document.getElementById('c-region').value = '';
-    const radioFreq = document.querySelector('input[name="c_freq"]:checked');
-    if(radioFreq) radioFreq.checked = false;
+    const rf = document.querySelector('input[name="c_freq"]:checked'); if(rf) rf.checked = false;
     document.getElementById('c-duration').value = '';
     document.getElementById('c-students').value = '';
     document.getElementById('c-link-divulgacao').value = '';
     document.getElementById('c-link-conteudo').value = '';
 }
-
 function addCourse() {
     const name = document.getElementById('c-name').value.trim();
     const types = [];
     document.querySelectorAll('#c-type-group input:checked').forEach(c => {
         if(c.value === 'Outro') {
-            const otherTxt = document.getElementById('c-type-other-text').value.trim();
-            if(otherTxt) types.push(`Outro: ${otherTxt}`);
-        } else {
-            types.push(c.value);
-        }
+            const txt = document.getElementById('c-type-other-text').value.trim();
+            if(txt) types.push(`Outro: ${txt}`);
+        } else types.push(c.value);
     });
     const region = document.getElementById('c-region').value.trim();
-    let freq = "";
-    const freqOpt = document.querySelector('input[name="c_freq"]:checked');
-    if(freqOpt) freq = freqOpt.value;
+    let freq = ""; const rf = document.querySelector('input[name="c_freq"]:checked'); if(rf) freq = rf.value;
     const duration = document.getElementById('c-duration').value.trim();
     const students = document.getElementById('c-students').value.trim();
     const linkDiv = document.getElementById('c-link-divulgacao').value.trim();
     const linkCont = document.getElementById('c-link-conteudo').value.trim();
 
     if (name === '' || types.length === 0 || region === '' || freq === '' || duration === '' || students === '') {
-        document.getElementById('course-add-error').style.display = 'block';
-        return;
+        document.getElementById('course-add-error').style.display = 'block'; return;
     }
-
-    const courseData = {
-        name, types, region, freq, duration, students, linkDiv, linkCont
-    };
-
-    if (editingCourseIndex >= 0) {
-        formData.courses[editingCourseIndex] = courseData;
-    } else {
-        formData.courses.push(courseData);
-    }
-    renderCourses();
-    hideCourseForm();
+    const courseData = { name, types, region, freq, duration, students, linkDiv, linkCont };
+    if (editingCourseIndex >= 0) formData.courses[editingCourseIndex] = courseData;
+    else formData.courses.push(courseData);
+    renderCourses(); hideCourseForm();
 }
-
 function renderCourses() {
-    const list = document.getElementById('courses-list');
-    list.innerHTML = '';
-    
+    const list = document.getElementById('courses-list'); list.innerHTML = '';
     formData.courses.forEach((c, i) => {
         const div = document.createElement('div');
         div.className = 'course-summary-card';
         div.innerHTML = `
-            <div class="card-actions">
-                <button class="action-btn edit" onclick="editCourse(${i})">Editar</button>
-                <button class="action-btn delete" onclick="removeCourse(${i})">Excluir</button>
-            </div>
-            <h4>${c.name}</h4>
-            <p><strong>Tipo:</strong> ${c.types.join(', ')}</p>
-            <p><strong>Região:</strong> ${c.region || '-'}</p>
+            <div class="card-actions"><button class="action-btn edit" onclick="editCourse(${i})">Editar</button><button class="action-btn delete" onclick="removeCourse(${i})">Excluir</button></div>
+            <h4>${c.name}</h4><p><strong>Tipo:</strong> ${c.types.join(', ')}</p><p><strong>Região:</strong> ${c.region}</p>
         `;
         list.appendChild(div);
     });
-
     const btnAdd = document.getElementById('btn-show-course-form');
-    if(formData.courses.length > 0) {
-        btnAdd.innerText = "+ Adicionar outro curso";
-        document.getElementById('course-list-error').style.display = 'none';
-    } else {
-        btnAdd.innerText = "+ Adicionar curso";
-    }
+    btnAdd.innerText = formData.courses.length > 0 ? "+ Adicionar outro curso" : "+ Adicionar curso";
+    document.getElementById('course-list-error').style.display = 'none';
 }
-
-window.removeCourse = function(index) {
-    if(confirm("Tem certeza que deseja excluir este curso?")) {
-        formData.courses.splice(index, 1);
-        renderCourses();
-    }
-}
-
-window.editCourse = function(index) {
-    const c = formData.courses[index];
-    editingCourseIndex = index;
-
+window.removeCourse = function(i) { if(confirm("Excluir curso?")) { formData.courses.splice(i, 1); renderCourses(); } };
+window.editCourse = function(i) {
+    const c = formData.courses[i]; editingCourseIndex = i;
     document.getElementById('c-name').value = c.name;
-    document.querySelectorAll('#c-type-group input[type="checkbox"]').forEach(chk => {
-        chk.checked = false; 
+    document.querySelectorAll('#c-type-group input').forEach(chk => {
+        chk.checked = false;
         if(chk.value !== 'Outro' && c.types.includes(chk.value)) chk.checked = true;
     });
-    const otherType = c.types.find(t => t.startsWith('Outro: '));
+    const other = c.types.find(t => t.startsWith('Outro: '));
     const chkOther = document.getElementById('chk-ctype-other');
     const inpOther = document.getElementById('c-type-other-text');
-    if(otherType) {
-        chkOther.checked = true;
-        inpOther.classList.remove('hidden');
-        inpOther.value = otherType.replace('Outro: ', '');
-    } else {
-        chkOther.checked = false;
-        inpOther.classList.add('hidden');
-        inpOther.value = '';
-    }
+    if(other) { chkOther.checked = true; inpOther.classList.remove('hidden'); inpOther.value = other.replace('Outro: ', ''); }
+    else { chkOther.checked = false; inpOther.classList.add('hidden'); inpOther.value = ''; }
     document.getElementById('c-region').value = c.region;
-    const radios = document.getElementsByName('c_freq');
-    radios.forEach(r => {
-        if(r.value === c.freq) r.checked = true;
-        else r.checked = false;
-    });
+    document.getElementsByName('c_freq').forEach(r => { r.checked = r.value === c.freq; });
     document.getElementById('c-duration').value = c.duration;
     document.getElementById('c-students').value = c.students;
     document.getElementById('c-link-divulgacao').value = c.linkDiv;
     document.getElementById('c-link-conteudo').value = c.linkCont;
-
+    
     document.getElementById('form-course-title').innerText = "Editar Curso";
     document.getElementById('btn-save-course').innerText = "Atualizar Curso";
     document.getElementById('btn-show-course-form').classList.add('hidden');
     document.getElementById('course-form-container').classList.remove('hidden');
     document.getElementById('course-add-error').style.display = 'none';
-}
+};
 
-// --- ENVIO (RD STATION) ---
+// --- ENVIO ---
 async function submitForm() {
     if (!validateStep(currentStep)) {
         const currentDiv = document.querySelector(`.step[data-step="${currentStep}"]`);
-        currentDiv.classList.add('shake');
-        setTimeout(() => currentDiv.classList.remove('shake'), 500);
-        return;
+        currentDiv.classList.add('shake'); setTimeout(() => currentDiv.classList.remove('shake'), 500); return;
     }
-
     document.getElementById('loading-overlay').classList.remove('hidden');
-
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const phone = document.getElementById('phone').value;
-    const city = document.getElementById('city-input').value;
-    const instagram = document.getElementById('instagram').value;
-    
-    const partTypes = Array.from(document.querySelectorAll('#partnership-type-group input:checked')).map(c => c.value).join(', ');
-    const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value).join(', ');
-    const products = tagInputProducts.getValue().join(', ');
-    
-    let motivoPotenza = "";
-    const potReasonOpt = document.querySelector('input[name="potenza_reason"]:checked');
-    if(potReasonOpt) {
-        motivoPotenza = potReasonOpt.value === "Outro" ? document.getElementById('potenza-reason-other').value : potReasonOpt.value;
-    }
-
-    let interessePotenza = "";
-    const potIntOpt = document.querySelector('input[name="potenza_interest"]:checked');
-    if(potIntOpt) {
-        if(potIntOpt.value === "Sim") {
-            interessePotenza = "Sim: " + tagInputPotenzaInterest.getValue().join(', ');
-        } else {
-            interessePotenza = "Não";
-        }
-    }
-
-    let parceriasAtivas = [];
-    if(document.getElementById('chk-dentais').checked) parceriasAtivas.push("Dentais: " + document.getElementById('input-dentais').value);
-    if(document.getElementById('chk-empresas').checked) parceriasAtivas.push("Empresas: " + document.getElementById('input-empresas').value);
-    if(document.getElementById('chk-no-partners').checked) parceriasAtivas.push("Nenhuma");
-    
-    const exclOpt = document.querySelector('input[name="exclusivity"]:checked');
-    if(exclOpt) {
-            const exclTxt = exclOpt.value === "Sim" ? "Sim: " + document.getElementById('input-exclusivity').value : "Não";
-            parceriasAtivas.push("Exclusividade: " + exclTxt);
-    }
-    const strParcerias = parceriasAtivas.join(' | ');
-
-    let strCursos = "";
-    if(formData.courses.length > 0) {
-        strCursos = formData.courses.map(c => 
-            `Curso: ${c.name}
-             Tipo: ${c.types.join(', ')}
-             Região: ${c.region}
-             Freq: ${c.freq}
-             Dur: ${c.duration}
-             Alunos: ${c.students}
-             Link Div: ${c.linkDiv}
-             Link Cont: ${c.linkCont}`
-        ).join('\n----------------\n');
-    }
 
     const payload = {
         token_rdstation: 'b32e0b962e0ec0de400f8215112b8a08',
         identificador: 'solicitacao-parceria-phs-externo',
-        email: email,
-        name: name,
-        mobile_phone: phone,
-        cf_telefone_whatsapp: phone,
-        cf_cidade_uf: city,
-        cf_instagram: instagram,
-        cf_tipo_de_parceria: partTypes,
-        cf_qual_marca_utiliza: brands,
-        cf_conhecimento_dominio_e_pratica_com_produtos: products,
-        cf_motivo_de_nao_ter_testado_potenza: motivoPotenza,
-        cf_interesse_em_potenza: interessePotenza,
-        cf_tem_parcerias_ativas: strParcerias,
-        cf_tipos_de_cursos_e_treinamentos: strCursos
+        email: document.getElementById('email').value,
+        name: document.getElementById('name').value,
+        mobile_phone: document.getElementById('phone').value,
+        cf_telefone_whatsapp: document.getElementById('phone').value,
+        cf_cidade_uf: document.getElementById('city-input').value,
+        cf_instagram: document.getElementById('instagram').value,
+        cf_tipo_de_parceria: Array.from(document.querySelectorAll('#partnership-type-group input:checked')).map(c=>c.value).join(', '),
+        cf_qual_marca_utiliza: Array.from(document.querySelectorAll('#brands-group input:checked')).map(c=>c.value).join(', '),
+        cf_conhecimento_dominio_e_pratica_com_produtos: tagInputProducts.getValue().join(', '),
+        cf_motivo_de_nao_ter_testado_potenza: (() => {
+           const r = document.querySelector('input[name="potenza_reason"]:checked');
+           if(!r) return "";
+           return r.value === "Outro" ? document.getElementById('potenza-reason-other').value : r.value;
+        })(),
+        cf_interesse_em_potenza: (() => {
+           const r = document.querySelector('input[name="potenza_interest"]:checked');
+           if(!r) return "";
+           return r.value === "Sim" ? "Sim: " + tagInputPotenzaInterest.getValue().join(', ') : "Não";
+        })(),
+        cf_tem_parcerias_ativas: (() => {
+            let p = [];
+            if(document.getElementById('chk-dentais').checked) p.push("Dentais: " + document.getElementById('input-dentais').value);
+            if(document.getElementById('chk-empresas').checked) p.push("Empresas: " + document.getElementById('input-empresas').value);
+            if(document.getElementById('chk-no-partners').checked) p.push("Nenhuma");
+            const exc = document.querySelector('input[name="exclusivity"]:checked');
+            if(exc) p.push("Exclusividade: " + (exc.value==="Sim" ? "Sim: "+document.getElementById('input-exclusivity').value : "Não"));
+            return p.join(' | ');
+        })(),
+        cf_tipos_de_cursos_e_treinamentos: formData.courses.map(c => 
+            `Curso: ${c.name}\nTipo: ${c.types.join(', ')}\nRegião: ${c.region}\nFreq: ${c.freq}\nDur: ${c.duration}\nAlunos: ${c.students}\nLinks: ${c.linkDiv} | ${c.linkCont}`
+        ).join('\n----------------\n')
     };
 
-    const formBody = Object.keys(payload).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(payload[key])).join('&');
-
+    const formBody = Object.keys(payload).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(payload[k])).join('&');
     try {
         await fetch('https://www.rdstation.com.br/api/1.3/conversions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-            },
-            body: formBody
+            method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'}, body: formBody
         });
-        
         document.getElementById('loading-overlay').classList.add('hidden');
         document.getElementById('partner-form').classList.add('hidden');
         document.getElementById('progress-container').classList.add('hidden');
         document.getElementById('success-screen').classList.remove('hidden');
-
     } catch (error) {
         console.error("Erro no envio:", error);
-        alert("Houve um erro técnico no envio. Verifique o console ou tente novamente.");
+        alert("Erro no envio. Verifique o console.");
         document.getElementById('loading-overlay').classList.add('hidden');
     }
 }
