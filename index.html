@@ -3,46 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solicitação de Parceria - PHS</title>
+    <title>Solicitação de Parceria</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://d335luupcnwy6.cloudfront.net/js/integration/2.0.0/rd-js-integration.min.js"></script>
+    <script src="script.js" defer></script>
 </head>
 <body>
-    <div class="container">
-        <div class="progress-container">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        
-        <div class="form-wrapper">
-            <form id="phsForm" novalidate>
-                <div id="questionsContainer"></div>
-            </form>
-        </div>
-        
-        <div class="navigation">
-            <button type="button" id="prevBtn" class="btn btn-secondary" style="display: none;">
-                <span>← Voltar</span>
-            </button>
-            <button type="button" id="nextBtn" class="btn btn-primary">
-                <span>Continuar →</span>
-            </button>
+
+<div id="app-container">
+    <div id="progress-container">
+        <div id="progress-bg">
+            <div id="progress-bar"></div>
         </div>
     </div>
-    
-    <div id="successMessage" class="success-container" style="display: none;">
-        <div class="success-content">
-            <div class="success-icon">✓</div>
-            <h2>Obrigado pelo cadastro! 🙏</h2>
-            <p>Nossa equipe irá avaliar e responder sua solicitação assim que possível.</p>
-            <p>Fique de olho no e-mail e whatsapp cadastrados 😉</p>
+
+    <form id="partner-form" onsubmit="return false;">
+        
+        <div class="step" data-step="1">
+            <h2>Qual é o seu nome completo?</h2>
+            <div class="input-group">
+                <input type="text" id="name" placeholder="Digite seu nome completo">
+                <div class="error-msg">Este campo é obrigatório</div>
+            </div>
+            <div class="nav-buttons">
+                <div></div>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
         </div>
-    </div>
-    
-    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+
+        <div class="step hidden" data-step="2">
+            <h2>Qual é o seu e-mail?</h2>
+            <div class="input-group">
+                <input type="email" id="email" placeholder="exemplo@email.com">
+                <div class="error-msg">Informe um e-mail válido</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="3">
+            <h2>Seu Telefone / WhatsApp</h2>
+            <div class="input-group">
+                <input type="tel" id="phone" placeholder="(XX) XXXXX-XXXX">
+                <div class="error-msg">Informe um telefone válido (apenas números)</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="4">
+            <h2>De onde você é? (Cidade/UF)</h2>
+            <div class="input-group" id="city-wrapper">
+                <div class="error-msg">Selecione sua cidade da lista</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="5">
+            <h2>Qual seu perfil no Instagram?</h2>
+            <div class="input-group">
+                <input type="text" id="instagram" placeholder="@seuusuario">
+                <div class="error-msg">Este campo é obrigatório</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="6">
+            <h2>Que tipo de parceria você busca?</h2>
+            <div class="sub-label">Selecione todas as opções aplicáveis</div>
+            <div class="checkbox-group" id="partnership-type-group">
+                <label><input type="checkbox" value="Conteúdos para redes sociais"> Conteúdos para redes sociais</label>
+                <label><input type="checkbox" value="Cursos, treinamentos e/ou Hands-on" id="chk-cursos"> Cursos, treinamentos e/ou Hands-on</label>
+                <div class="error-msg">Selecione pelo menos uma opção</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="7">
+            <h2>Quais marcas você utiliza atualmente?</h2>
+            <div class="checkbox-group" id="brands-group">
+                <label><input type="checkbox" value="Tokuyama" class="brand-opt"> Tokuyama</label>
+                <label><input type="checkbox" value="Potenza" class="brand-opt"> Potenza</label>
+                <label><input type="checkbox" value="Nic Tone" class="brand-opt"> Nic Tone</label>
+                <label><input type="checkbox" value="Ainda não utilizei" id="chk-brand-none"> Ainda não utilizei, será meu primeiro contato...</label>
+                <div class="error-msg">Selecione uma opção</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="8">
+            <h2>Quais produtos você conhece/utiliza?</h2>
+            <div class="sub-label">Pesquise e clique para adicionar</div>
+            <div id="products-tag-input-wrapper">
+                </div>
+            <div class="error-msg" id="err-p8">Selecione pelo menos um produto</div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="9">
+            <h2>Por que ainda não testou Potenza?</h2>
+            <div class="radio-group" id="potenza-reason-group">
+                <label><input type="radio" name="potenza_reason" value="Sem oportunidade"> Sem oportunidade</label>
+                <label><input type="radio" name="potenza_reason" value="Outras marcas"> Outras marcas</label>
+                <label><input type="radio" name="potenza_reason" value="Não adaptei"> Não adaptei</label>
+                <label><input type="radio" name="potenza_reason" value="Outro" id="radio-potenza-other"> Outro</label>
+            </div>
+            <input type="text" id="potenza-reason-other" placeholder="Qual motivo?" class="hidden" style="margin-top:10px;">
+            <div class="error-msg">Selecione uma opção</div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="10">
+            <h2>Tem interesse em testar algum produto Potenza?</h2>
+            <div class="radio-group" id="potenza-interest-bool">
+                <label><input type="radio" name="potenza_interest" value="Sim" id="radio-interest-sim"> Sim</label>
+                <label><input type="radio" name="potenza_interest" value="Não"> Não</label>
+            </div>
+            <div id="potenza-interest-tags" class="hidden" style="margin-top:15px;">
+                <label>Quais produtos?</label>
+                <div id="potenza-interest-wrapper">
+                    </div>
+            </div>
+            <div class="error-msg">Preencha este campo</div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="11">
+            <h2>Possui parcerias ativas?</h2>
+            <div class="sub-label">Preencha os nomes ou marque Nenhuma</div>
+            <div class="checkbox-group" id="active-partnerships-group">
+                <label style="flex-direction: column; align-items: flex-start;">
+                    <div style="display:flex; align-items:center;">
+                        <input type="checkbox" id="chk-dentais"> Dentais
+                    </div>
+                    <input type="text" id="input-dentais" placeholder="Quais dentais?" class="hidden" style="margin-top:5px; width:100%;">
+                </label>
+                <label style="flex-direction: column; align-items: flex-start;">
+                    <div style="display:flex; align-items:center;">
+                        <input type="checkbox" id="chk-empresas"> Empresas
+                    </div>
+                    <input type="text" id="input-empresas" placeholder="Quais empresas?" class="hidden" style="margin-top:5px; width:100%;">
+                </label>
+                <label><input type="checkbox" id="chk-no-partners"> Nenhuma</label>
+                <div class="error-msg">Selecione uma opção válida</div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="12">
+            <h2>Existe contrato de exclusividade?</h2>
+            <div class="radio-group" id="exclusivity-group">
+                <label style="flex-direction: column; align-items: flex-start;">
+                    <div style="display:flex; align-items:center;">
+                        <input type="radio" name="exclusivity" value="Sim" id="radio-excl-sim"> Sim
+                    </div>
+                    <input type="text" id="input-exclusivity" placeholder="Detalhes da exclusividade" class="hidden" style="margin-top:5px; width:100%;">
+                </label>
+                <label><input type="radio" name="exclusivity" value="Não"> Não</label>
+            </div>
+            <div class="error-msg">Preencha este campo</div>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-next">Próximo</button>
+            </div>
+        </div>
+
+        <div class="step hidden" data-step="13">
+            <h2>Módulo de Cursos</h2>
+            <div class="sub-label">Adicione abaixo os cursos que você ministra.</div>
+            
+            <div id="courses-list"></div>
+
+            <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #E5E7EB;">
+                <h3 style="font-size: 1rem; margin-bottom: 10px;">Adicionar Novo Curso</h3>
+                
+                <label>Nome do Curso</label>
+                <input type="text" id="c-name" class="course-input">
+                
+                <label>Tipo (Teórico/Prático)</label>
+                <input type="text" id="c-type" class="course-input">
+                
+                <label>Regiões de Atuação</label>
+                <input type="text" id="c-region" class="course-input">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Frequência (anual)</label>
+                        <input type="text" id="c-freq" class="course-input">
+                    </div>
+                    <div>
+                        <label>Duração (horas/dias)</label>
+                        <input type="text" id="c-dur" class="course-input">
+                    </div>
+                </div>
+
+                <label>Média de Alunos</label>
+                <input type="number" id="c-students" class="course-input">
+
+                <label>Links (Página/Divulgação)</label>
+                <input type="text" id="c-links" class="course-input">
+
+                <button class="btn btn-action" id="btn-add-course">Adicionar Curso</button>
+                <div class="error-msg" id="course-add-error">Preencha todos os campos do curso para adicionar</div>
+            </div>
+            
+            <div class="error-msg" id="course-list-error">Adicione pelo menos um curso para continuar</div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary btn-prev">Voltar</button>
+                <button class="btn btn-primary btn-submit">Enviar Solicitação</button>
+            </div>
+        </div>
+
+    </form>
+
+    <div id="loading-overlay" class="hidden">
         <div class="spinner"></div>
-        <p>Enviando sua solicitação...</p>
+        <p>Enviando seus dados...</p>
     </div>
-    
-    <script src="script.js"></script>
+
+    <div id="success-screen" class="hidden">
+        <div class="success-icon">✓</div>
+        <h2>Obrigado pelo cadastro!</h2>
+        <p>Recebemos suas informações com sucesso.</p>
+    </div>
+
+</div>
+
 </body>
 </html>
