@@ -6,10 +6,20 @@
     <title>Solicitação de Parceria</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Impede que o scroll cause loop infinito */
+            height: auto;
+            min-height: 100vh;
+        }
+    </style>
 </head>
 <body>
 
-<div id="app-container">
+<div id="app-container" style="padding-bottom: 20px;">
     <div id="progress-container">
         <div id="progress-bg">
             <div id="progress-bar"></div>
@@ -283,26 +293,50 @@
 </div>
 
 <script>
+    let ultimaAlturaEnviada = 0;
+
     // Função que calcula a altura e envia para o 'pai' (RD Station)
     function enviarAlturaParaOIframe() {
-        const altura = document.body.scrollHeight;
-        // Envia mensagem para qualquer origem (*)
-        window.parent.postMessage({ iframeHeight: altura }, '*');
+        // Mede o container de conteúdo, não o body inteiro
+        const container = document.getElementById('app-container');
+        if (!container) return;
+
+        const alturaAtual = container.scrollHeight;
+        
+        // --- TRAVA DE SEGURANÇA ---
+        // Só envia se a diferença for maior que 15px para evitar loops infinitos
+        if (Math.abs(alturaAtual - ultimaAlturaEnviada) > 15) {
+            ultimaAlturaEnviada = alturaAtual;
+            // Envia mensagem para qualquer origem (*)
+            window.parent.postMessage({ iframeHeight: alturaAtual }, '*');
+        }
     }
 
     // 1. Enviar ao carregar
-    window.addEventListener('load', enviarAlturaParaOIframe);
+    window.addEventListener('load', () => setTimeout(enviarAlturaParaOIframe, 100));
 
-    // 2. Enviar ao redimensionar a janela
-    window.addEventListener('resize', enviarAlturaParaOIframe);
-
-    // 3. Monitorar mudanças no DOM (ex: abrir lista, erros, troca de passo)
-    const observer = new MutationObserver(enviarAlturaParaOIframe);
-    observer.observe(document.body, { 
-        attributes: true, 
-        childList: true, 
-        subtree: true 
+    // 2. Enviar ao redimensionar a janela (com debounce leve)
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(enviarAlturaParaOIframe, 200);
     });
+
+    // 3. Monitorar mudanças no DOM
+    const observer = new MutationObserver((mutations) => {
+        // Verifica se a mudança é relevante
+        enviarAlturaParaOIframe();
+    });
+    
+    // Observa o container principal em vez do body inteiro
+    const appContainer = document.getElementById('app-container');
+    if (appContainer) {
+        observer.observe(appContainer, { 
+            attributes: true, 
+            childList: true, 
+            subtree: true 
+        });
+    }
 </script>
 
 </body>
