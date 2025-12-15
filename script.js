@@ -563,7 +563,7 @@ async function submitForm() {
 
     const payload = {
         token_rdstation: 'b32e0b962e0ec0de400f8215112b8a08',
-        identificador: 'solicitacao-parceria-phs-externo',
+        identificador: 'solicitar-parceria',
         email: document.getElementById('email').value,
         name: document.getElementById('name').value,
         mobile_phone: document.getElementById('phone').value,
