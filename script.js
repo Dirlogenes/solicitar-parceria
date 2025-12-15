@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateProgressBar();
 });
 
-// --- CLASSE TAG INPUT ---
+// --- CLASSE TAG INPUT (ATUALIZADA) ---
 class TagInput {
     constructor(containerId, sourceData, isMulti) {
         this.container = document.getElementById(containerId);
@@ -70,6 +70,7 @@ class TagInput {
         this.container.innerHTML = '';
         this.container.className = 'tag-input-container';
         
+        // Render Tags Selecionadas
         this.selectedItems.forEach((item, index) => {
             const tag = document.createElement('div');
             tag.className = 'tag';
@@ -78,13 +79,20 @@ class TagInput {
             this.container.appendChild(tag);
         });
 
+        // Input
         if (this.isMulti || this.selectedItems.length === 0) {
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'tag-input-field';
-            input.placeholder = this.selectedItems.length === 0 ? 'Digite e tecle Enter...' : '';
+            // Placeholder muda se já houver itens ou não
+            input.placeholder = this.selectedItems.length === 0 ? (this.isMulti ? 'Clique para selecionar...' : 'Digite ou selecione...') : '';
             
+            // --- EVENTOS PRINCIPAIS ---
+            
+            // Digitação: Filtra a lista
             input.oninput = (e) => this.handleInput(e);
+            
+            // Teclado: Enter (add) e Backspace (remove)
             input.onkeydown = (e) => {
                 if(e.key === 'Enter') {
                     e.preventDefault();
@@ -98,7 +106,20 @@ class TagInput {
                     this.remove(this.selectedItems.length - 1);
                 }
             };
-            input.onfocus = () => this.container.classList.add('focus');
+
+            // Foco: Mostra a lista completa (comportamento novo solicitado)
+            input.onfocus = (e) => {
+                this.container.classList.add('focus');
+                this.handleInput(e); // Chama o filtro (com valor vazio = mostra tudo)
+            };
+
+            // Clique: Garante que a lista abre se clicar num input já focado
+            input.onclick = (e) => {
+                e.stopPropagation(); // Evita conflitos com o click do container
+                this.handleInput(e);
+            };
+
+            // Blur: Esconde a lista com delay (para dar tempo do clique no item funcionar)
             input.onblur = () => setTimeout(() => {
                 this.container.classList.remove('focus');
                 this.closeList();
@@ -119,13 +140,14 @@ class TagInput {
 
     handleInput(e) {
         const val = e.target.value.toLowerCase();
-        this.closeList();
-        if (!val) return;
-
+        
+        // Filtra: Mostra item se não estiver selecionado E (se texto vazio OU se texto bate com o item)
         if (this.sourceData.length > 0) {
             const matches = this.sourceData.filter(item => 
-                item.toLowerCase().includes(val) && !this.selectedItems.includes(item)
-            ).slice(0, 10);
+                !this.selectedItems.includes(item) && 
+                (val === '' || item.toLowerCase().includes(val))
+            ); 
+            // Removido o .slice(0, 10) para permitir rolar a lista completa
 
             if (matches.length > 0) {
                 this.listContainer.innerHTML = '';
@@ -137,6 +159,8 @@ class TagInput {
                     div.onclick = () => this.add(match);
                     this.listContainer.appendChild(div);
                 });
+            } else {
+                this.closeList(); // Se não houver matches (ex: digitou algo nada a ver)
             }
         }
     }
@@ -148,7 +172,12 @@ class TagInput {
             this.selectedItems = [item];
         }
         this.render();
-        if(this.isMulti && this.inputElement) this.inputElement.focus();
+        // Mantém foco para continuar selecionando se for multi
+        if(this.isMulti && this.inputElement) {
+            this.inputElement.focus();
+            // Pequeno timeout para reabrir a lista atualizada (sem o item recém adicionado)
+            setTimeout(() => this.handleInput({ target: this.inputElement }), 10);
+        }
     }
 
     remove(index) {
