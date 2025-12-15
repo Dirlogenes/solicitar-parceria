@@ -22,10 +22,11 @@ const productsNicTone = ["Lençol de borracha para isolamento absoluto Nic Tone"
 
 // --- VARIÁVEIS DE ESTADO ---
 let currentStep = 1;
-let citiesList = []; // Será populado pela API
+let citiesList = []; 
 let formData = {
     courses: []
 };
+let editingCourseIndex = -1; // -1 significa novo curso
 
 // Componentes de Input de Tag
 let tagInputProducts, tagInputPotenzaInterest, cityAutocomplete;
@@ -36,27 +37,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios');
         const data = await response.json();
-        // Mapeia para formato legível
         citiesList = data.map(c => `${c.nome} - ${c.microrregiao.mesorregiao.UF.sigla}`);
-        // Atualiza o componente de cidade com a lista carregada
         if(cityAutocomplete) cityAutocomplete.updateSource(citiesList);
     } catch (e) {
-        console.error("Erro ao carregar IBGE. Modo manual ativado.", e);
-        // Não faz mal se falhar, o utilizador agora pode digitar manualmente
+        console.error("Erro IBGE. Modo manual ativo.", e);
     }
 
     // Inicializar Componentes Especiais
     tagInputProducts = new TagInput('products-tag-input-wrapper', [], true);
     tagInputPotenzaInterest = new TagInput('potenza-interest-wrapper', productsPotenza, true);
-    
-    // Inicializa cidade vazio, será preenchido pelo fetch acima
     cityAutocomplete = new TagInput('city-wrapper', citiesList, false); 
 
     setupEventListeners();
     updateProgressBar();
 });
 
-// --- CLASSE TAG INPUT / AUTOCOMPLETE ---
+// --- CLASSE TAG INPUT ---
 class TagInput {
     constructor(containerId, sourceData, isMulti) {
         this.container = document.getElementById(containerId);
@@ -74,7 +70,6 @@ class TagInput {
         this.container.innerHTML = '';
         this.container.className = 'tag-input-container';
         
-        // Render Tags (Itens selecionados)
         this.selectedItems.forEach((item, index) => {
             const tag = document.createElement('div');
             tag.className = 'tag';
@@ -83,19 +78,14 @@ class TagInput {
             this.container.appendChild(tag);
         });
 
-        // Input
-        // Só mostra o input se for Multi-seleção OU se ainda não tiver nada selecionado
         if (this.isMulti || this.selectedItems.length === 0) {
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'tag-input-field';
             input.placeholder = this.selectedItems.length === 0 ? 'Digite e tecle Enter...' : '';
             
-            // Events
             input.oninput = (e) => this.handleInput(e);
-            
             input.onkeydown = (e) => {
-                // CORREÇÃO: Permitir Enter para adicionar texto livre
                 if(e.key === 'Enter') {
                     e.preventDefault();
                     if (input.value.trim() !== '') {
@@ -104,12 +94,10 @@ class TagInput {
                         this.closeList();
                     }
                 }
-                // Backspace para apagar item anterior
                 if(e.key === 'Backspace' && input.value === '') {
                     this.remove(this.selectedItems.length - 1);
                 }
             };
-
             input.onfocus = () => this.container.classList.add('focus');
             input.onblur = () => setTimeout(() => {
                 this.container.classList.remove('focus');
@@ -120,12 +108,10 @@ class TagInput {
             this.inputElement = input;
         }
 
-        // List Container (Dropdown)
         this.listContainer = document.createElement('div');
         this.listContainer.className = 'autocomplete-list';
         this.container.appendChild(this.listContainer);
 
-        // Ao clicar no container, focar no input
         this.container.onclick = (e) => {
             if (e.target === this.container && this.inputElement) this.inputElement.focus();
         };
@@ -136,11 +122,10 @@ class TagInput {
         this.closeList();
         if (!val) return;
 
-        // Filtra apenas se houver dados na lista (sourceData)
         if (this.sourceData.length > 0) {
             const matches = this.sourceData.filter(item => 
                 item.toLowerCase().includes(val) && !this.selectedItems.includes(item)
-            ).slice(0, 10); // Limita a 10 resultados para não travar
+            ).slice(0, 10);
 
             if (matches.length > 0) {
                 this.listContainer.innerHTML = '';
@@ -160,11 +145,9 @@ class TagInput {
         if (this.isMulti) {
             this.selectedItems.push(item);
         } else {
-            // Se for single, substitui o array
             this.selectedItems = [item];
         }
         this.render();
-        // Mantém o foco se for multi, senão perde o foco
         if(this.isMulti && this.inputElement) this.inputElement.focus();
     }
 
@@ -184,17 +167,15 @@ class TagInput {
     }
 }
 
-// --- CONTROLE DE FLUXO E EVENTOS ---
+// --- EVENTOS ---
 function setupEventListeners() {
-    // Navegação
     document.querySelectorAll('.btn-next').forEach(btn => btn.addEventListener('click', nextStep));
     document.querySelectorAll('.btn-prev').forEach(btn => btn.addEventListener('click', prevStep));
     document.querySelector('.btn-submit').addEventListener('click', submitForm);
 
-    // Q7 - Marcas (Lógica Exclusiva)
+    // Q7 - Marcas
     const brandChecks = document.querySelectorAll('#brands-group input');
     const noneCheck = document.getElementById('chk-brand-none');
-    
     brandChecks.forEach(chk => {
         chk.addEventListener('change', (e) => {
             if(e.target === noneCheck && noneCheck.checked) {
@@ -258,8 +239,18 @@ function setupEventListeners() {
         });
     });
 
-    // Q13 - Cursos
-    document.getElementById('btn-add-course').addEventListener('click', addCourse);
+    // Q13 - Cursos (Eventos)
+    document.getElementById('btn-show-course-form').addEventListener('click', showCourseForm);
+    document.getElementById('btn-save-course').addEventListener('click', addCourse);
+    document.getElementById('btn-cancel-course').addEventListener('click', hideCourseForm);
+    
+    // Toggle campo "Outro" no Tipo de Curso
+    const chkCtypeOther = document.getElementById('chk-ctype-other');
+    const inpCtypeOther = document.getElementById('c-type-other-text');
+    chkCtypeOther.addEventListener('change', () => {
+        if(chkCtypeOther.checked) inpCtypeOther.classList.remove('hidden');
+        else inpCtypeOther.classList.add('hidden');
+    });
 }
 
 function updateProductSource() {
@@ -276,7 +267,7 @@ function updateProductSource() {
     tagInputProducts.updateSource(source);
 }
 
-// --- FUNÇÕES DE NAVEGAÇÃO E VALIDAÇÃO ---
+// --- NAVEGAÇÃO ---
 function nextStep() {
     if (validateStep(currentStep)) {
         const next = getNextStepIndex(currentStep);
@@ -306,32 +297,22 @@ function goToStep(stepIndex) {
 
 function getNextStepIndex(current) {
     let next = current + 1;
-
-    // Lógica Condicional de Pulo
     if (current === 8) { 
         const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
         const isFirstTime = brands.includes("Ainda não utilizei");
         const hasPotenza = brands.includes("Potenza");
         
-        if (!hasPotenza && !isFirstTime) {
-            return 9;
-        } else {
-            return 11;
-        }
+        if (!hasPotenza && !isFirstTime) return 9;
+        else return 11;
     }
-
     if (current === 9) return 10;
     if (current === 10) return 11;
-
     if (current === 11) {
             const hasNone = document.getElementById('chk-no-partners').checked;
             if (hasNone) return checkCoursesStep(12);
             return 12; 
     }
-
-    if (current === 12) {
-            return checkCoursesStep(12);
-    }
+    if (current === 12) return checkCoursesStep(12);
 
     return next;
 }
@@ -367,7 +348,7 @@ function updateProgressBar() {
     document.getElementById('progress-bar').style.width = `${pct}%`;
 }
 
-// --- VALIDAÇÃO POR PASSO ---
+// --- VALIDAÇÃO GERAL ---
 function validateStep(step) {
     let valid = true;
     const stepDiv = document.querySelector(`.step[data-step="${step}"]`);
@@ -397,8 +378,7 @@ function validateStep(step) {
         valid = val.length >= 8;
         setError(document.getElementById('phone'), null, !valid);
     }
-    if (step === 4) { // Cidade Tag Input
-        // Validação: precisa ter selecionado algo (entrado como tag)
+    if (step === 4) { 
         const val = cityAutocomplete.getValue();
         valid = val !== '';
         setError(document.getElementById('city-wrapper'), null, !valid);
@@ -472,53 +452,186 @@ function validateStep(step) {
 }
 
 // --- LÓGICA DE CURSOS ---
-function addCourse() {
-    const inputs = ['c-name', 'c-type', 'c-region', 'c-freq', 'c-dur', 'c-students', 'c-links'];
-    const values = {};
-    let isValid = true;
+function showCourseForm() {
+    editingCourseIndex = -1; // Modo Criação
+    document.getElementById('form-course-title').innerText = "Adicionar Novo Curso";
+    document.getElementById('btn-save-course').innerText = "Salvar Curso";
+    clearCourseForm();
+    document.getElementById('btn-show-course-form').classList.add('hidden');
+    document.getElementById('course-form-container').classList.remove('hidden');
+    document.getElementById('course-add-error').style.display = 'none';
+}
+
+function hideCourseForm() {
+    document.getElementById('course-form-container').classList.add('hidden');
+    document.getElementById('btn-show-course-form').classList.remove('hidden');
+}
+
+function clearCourseForm() {
+    document.getElementById('c-name').value = '';
     
-    inputs.forEach(id => {
-        const el = document.getElementById(id);
-        values[id] = el.value.trim();
-        if(values[id] === '') {
-            el.classList.add('error-border');
-            isValid = false;
+    // Clear Checks
+    document.querySelectorAll('#c-type-group input[type="checkbox"]').forEach(c => c.checked = false);
+    document.getElementById('c-type-other-text').value = '';
+    document.getElementById('c-type-other-text').classList.add('hidden');
+
+    document.getElementById('c-region').value = '';
+    
+    // Clear Radios
+    const radioFreq = document.querySelector('input[name="c_freq"]:checked');
+    if(radioFreq) radioFreq.checked = false;
+
+    document.getElementById('c-duration').value = '';
+    document.getElementById('c-students').value = '';
+    document.getElementById('c-link-divulgacao').value = '';
+    document.getElementById('c-link-conteudo').value = '';
+}
+
+function addCourse() {
+    // 1. Coleta e Validação
+    const name = document.getElementById('c-name').value.trim();
+    
+    // Tipos
+    const types = [];
+    document.querySelectorAll('#c-type-group input:checked').forEach(c => {
+        if(c.value === 'Outro') {
+            const otherTxt = document.getElementById('c-type-other-text').value.trim();
+            if(otherTxt) types.push(`Outro: ${otherTxt}`);
         } else {
-            el.classList.remove('error-border');
+            types.push(c.value);
         }
     });
 
-    const err = document.getElementById('course-add-error');
-    if(!isValid) {
-        err.style.display = 'block';
+    const region = document.getElementById('c-region').value.trim();
+    
+    // Frequência
+    let freq = "";
+    const freqOpt = document.querySelector('input[name="c_freq"]:checked');
+    if(freqOpt) freq = freqOpt.value;
+
+    const duration = document.getElementById('c-duration').value.trim();
+    const students = document.getElementById('c-students').value.trim();
+    const linkDiv = document.getElementById('c-link-divulgacao').value.trim();
+    const linkCont = document.getElementById('c-link-conteudo').value.trim();
+
+    // Validação mínima: Nome e Tipo são essenciais
+    if (name === '' || types.length === 0) {
+        document.getElementById('course-add-error').style.display = 'block';
         return;
     }
-    err.style.display = 'none';
 
-    formData.courses.push(values);
+    const courseData = {
+        name,
+        types,
+        region,
+        freq,
+        duration,
+        students,
+        linkDiv,
+        linkCont
+    };
+
+    // 2. Salvar (Novo ou Edição)
+    if (editingCourseIndex >= 0) {
+        // Atualiza existente
+        formData.courses[editingCourseIndex] = courseData;
+    } else {
+        // Adiciona novo
+        formData.courses.push(courseData);
+    }
+
     renderCourses();
-    inputs.forEach(id => document.getElementById(id).value = '');
+    hideCourseForm();
 }
 
 function renderCourses() {
     const list = document.getElementById('courses-list');
     list.innerHTML = '';
+    
     formData.courses.forEach((c, i) => {
         const div = document.createElement('div');
-        div.className = 'course-card';
+        div.className = 'course-summary-card';
         div.innerHTML = `
-            <strong>${c['c-name']}</strong> (${c['c-type']})<br>
-            <small>${c['c-region']} | ${c['c-freq']}</small>
-            <span class="remove-course" onclick="removeCourse(${i})">Excluir</span>
+            <div class="card-actions">
+                <button class="action-btn edit" onclick="editCourse(${i})">Editar</button>
+                <button class="action-btn delete" onclick="removeCourse(${i})">Excluir</button>
+            </div>
+            <h4>${c.name}</h4>
+            <p><strong>Tipo:</strong> ${c.types.join(', ')}</p>
+            <p><strong>Região:</strong> ${c.region || '-'}</p>
         `;
         list.appendChild(div);
     });
+
+    // Atualiza texto do botão se houver cursos
+    const btnAdd = document.getElementById('btn-show-course-form');
+    if(formData.courses.length > 0) {
+        btnAdd.innerText = "+ Adicionar outro curso";
+        document.getElementById('course-list-error').style.display = 'none';
+    } else {
+        btnAdd.innerText = "+ Adicionar curso";
+    }
 }
 
+// Funções Globais (para onclick no HTML)
 window.removeCourse = function(index) {
-    formData.courses.splice(index, 1);
-    renderCourses();
+    if(confirm("Tem certeza que deseja excluir este curso?")) {
+        formData.courses.splice(index, 1);
+        renderCourses();
+    }
 }
+
+window.editCourse = function(index) {
+    const c = formData.courses[index];
+    editingCourseIndex = index;
+
+    // Preencher Formulário
+    document.getElementById('c-name').value = c.name;
+
+    // Types Checkbox
+    document.querySelectorAll('#c-type-group input[type="checkbox"]').forEach(chk => {
+        chk.checked = false; // reset
+        if(chk.value !== 'Outro' && c.types.includes(chk.value)) {
+            chk.checked = true;
+        }
+    });
+
+    // Tratar "Outro"
+    const otherType = c.types.find(t => t.startsWith('Outro: '));
+    const chkOther = document.getElementById('chk-ctype-other');
+    const inpOther = document.getElementById('c-type-other-text');
+    if(otherType) {
+        chkOther.checked = true;
+        inpOther.classList.remove('hidden');
+        inpOther.value = otherType.replace('Outro: ', '');
+    } else {
+        chkOther.checked = false;
+        inpOther.classList.add('hidden');
+        inpOther.value = '';
+    }
+
+    document.getElementById('c-region').value = c.region;
+
+    // Frequency Radio
+    const radios = document.getElementsByName('c_freq');
+    radios.forEach(r => {
+        if(r.value === c.freq) r.checked = true;
+        else r.checked = false;
+    });
+
+    document.getElementById('c-duration').value = c.duration;
+    document.getElementById('c-students').value = c.students;
+    document.getElementById('c-link-divulgacao').value = c.linkDiv;
+    document.getElementById('c-link-conteudo').value = c.linkCont;
+
+    // UI Updates
+    document.getElementById('form-course-title').innerText = "Editar Curso";
+    document.getElementById('btn-save-course').innerText = "Atualizar Curso";
+    document.getElementById('btn-show-course-form').classList.add('hidden');
+    document.getElementById('course-form-container').classList.remove('hidden');
+    document.getElementById('course-add-error').style.display = 'none';
+}
+
 
 // --- ENVIO (RD STATION) ---
 async function submitForm() {
@@ -531,6 +644,7 @@ async function submitForm() {
 
     document.getElementById('loading-overlay').classList.remove('hidden');
 
+    // Coleta Dados
     const name = document.getElementById('name').value;
     const email = document.getElementById('email').value;
     const phone = document.getElementById('phone').value;
@@ -569,10 +683,18 @@ async function submitForm() {
     }
     const strParcerias = parceriasAtivas.join(' | ');
 
+    // Formatar Cursos para String
     let strCursos = "";
     if(formData.courses.length > 0) {
         strCursos = formData.courses.map(c => 
-            `Curso: ${c['c-name']} | Tipo: ${c['c-type']} | Região: ${c['c-region']} | Freq: ${c['c-freq']} | Dur: ${c['c-dur']} | Alunos: ${c['c-students']} | Links: ${c['c-links']}`
+            `Curso: ${c.name}
+             Tipo: ${c.types.join(', ')}
+             Região: ${c.region}
+             Freq: ${c.freq}
+             Dur: ${c.duration}
+             Alunos: ${c.students}
+             Link Div: ${c.linkDiv}
+             Link Cont: ${c.linkCont}`
         ).join('\n----------------\n');
     }
 
