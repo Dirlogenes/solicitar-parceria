@@ -1,24 +1,46 @@
 // --- DADOS ESTÁTICOS ---
 const productsTokuyama = [
-    "Resina Estelite Omega", "Resina Palfique LX5", "Resina Estelite Posterior", "Resina Palfique Omnichroma",
-    "Resina Palfique Universal Flow", "Reembasador Sofreliner Tough", "Reembasador Rebase 2", 
-    "Adesivo Palfique Bond Autocondicionante", "Adesivo Palfique Universal Bond", "Pincel Tokuyama",
-    "Corante e Opacificante Estelite Color", "Cimento Resinosa Estecem Plus"
+    "Resina Estelite Omega",
+    "Resina Estelite Omega Bianco",
+    "Resina Palfique LX5",
+    "Resina Estelite Posterior",
+    "Resina Palfique Omnichroma (Standard, Blocker e Trial)",
+    "Resina Palfique Universal Flow (High, Medium e Super Low)",
+    "Reembasador Sofreliner Tough (Soft e Medium)",
+    "Reembasador Rebase II Fast",
+    "Adesivo Palfique Bond Autocondicionante",
+    "Adesivo Palfique Universal Bond",
+    "Pincel Tokuyama Brush Nº 24",
+    "Corante Estelite Color",
+    "Cimento Resinoso Estecem Plus",
+    "Removedor De Silicone",
+    "Dispensador Tokuyama Dispenser II"
 ];
+
 const productsPotenza = [
-    "Clareador Consultório Potenza Bianco Peróxido de Hidrogênio 35%", "Clareador Consultório Potenza Bianco Peróxido de Hidrogênio 38%",
-    "Clareador Consultório Potenza Bianco PF Peróxido de Carbamida 35%", "Clareador Caseiro Peróxido de Carbamida 10%",
-    "Clareador Caseiro Peróxido de Carbamida 16%", "Clareador Caseiro Peróxido de Carbamida 22%",
-    "Clareador Caseiro Peróxido de Hidrogênio 6%", "Clareador Caseiro Peróxido de Hidrogênio 7,5%",
-    "Clareador Caseiro Peróxido de Hidrogênio 9,5%", "Barreira Gengival Potenza Blocco", "Dessensibilizantes Potenza Esente",
-    "Cimento Ortodôntico Potenza Orthoblue", "Condicionador Ácido Fosfórico H3PO4 Esmalte e Dentina Potenza Attaco 35%",
-    "Condicionador Ácido Fosfórico H3PO4 Esmalte e Dentina Potenza Attaco 37%", "Condicionador Ácido Fluorídrico HF Cerâmica Potenza Attaco 5%",
-    "Condicionador Ácido Fluorídrico HF Cerâmica Potenza Attaco 10%", "Microabrasão Potenza Abrasione",
-    "Hidratante Bucal Longa Duração Potenza Idrata", "Pastas de Polimento para Resinas Potenza Specchi",
-    "Placas de EVA para Clareamento Potenza Stampo EVA", "Espuma de Limpeza de Moldeira Potenza Cloud Clean",
-    "Agente de União Potenza Silano", "Bloqueador de Oxigênio Potenza Bloxy"
+    "Clareador Consultório Potenza Bianco Peróxido De Hidrogênio (35% e 38%)",
+    "Clareador Consultório Potenza Bianco PF Peróxido De Carbamida 35%",
+    "Clareador Caseiro Potenza Bianco Peróxido De Carbamida (10, 16 e 22%)",
+    "Clareador Caseiro Potenza Bianco Peróxido De Hidrogênio (6, 7,5 e 9,5%)",
+    "Barreira Gengival Potenza Blocco",
+    "Dessensibilizante Potenza Esente (Glu-Hema, 0,2% e 2%)",
+    "Cimento Ortodôntico Potenza Orthoblue",
+    "Condicionador Ácido Fosfórico Potenza Attaco (35 e 37%)",
+    "Condicionador Ácido Fluorídrico Potenza Attaco HF (5 e 10%)",
+    "Microabrasão Potenza Abrasione",
+    "Hidratante Bucal Potenza Idrata",
+    "Pasta De Polimento Potenza Specchi",
+    "Placa De Clareamento Potenza Stampo EVA",
+    "Espuma De Limpeza Potenza Cloud Clean",
+    "Espuma De Flúor Potenza Cloud Fluor",
+    "Agente De União Potenza Silano",
+    "Bloqueador De Oxigênio Potenza Bloxy",
+    "Fita De Matriz De Poliester Potenza"
 ];
-const productsNicTone = ["Lençol de borracha para isolamento absoluto Nic Tone"];
+
+const productsNicTone = [
+    "Lençol De Borracha Para Isolamento Nic Tone (Médio e Grosso)"
+];
 
 // --- VARIÁVEIS DE ESTADO ---
 let currentStep = 1;
