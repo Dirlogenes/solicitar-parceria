@@ -22,51 +22,59 @@ input[type="text"], input[type="email"], input[type="tel"], input[type="number"]
 }
 input:focus, textarea:focus { border-color: #4F46E5; }
 
-/* --- BUTTONS (Atualizado) --- */
+/* --- BUTTONS --- */
 .nav-buttons { 
     display: flex; 
-    justify-content: center; /* Centraliza os botões */
-    gap: 15px; /* Espaço entre eles */
+    justify-content: center; 
+    gap: 15px; 
     margin-top: 30px; 
 }
 
 .btn { 
-    padding: 10px 0; /* Menos altura (padding vertical reduzido) */
+    padding: 10px 0; 
     border-radius: 6px; 
     font-weight: 600; 
     cursor: pointer; 
     border: none; 
-    font-size: 0.95rem; /* Fonte levemente menor */
+    font-size: 0.95rem; 
     transition: background 0.2s, transform 0.1s;
-    width: 130px; /* Largura fixa para ambos ficarem iguais */
+    width: 130px; 
     text-align: center;
 }
 
 .btn:active { transform: scale(0.98); }
 
-.btn-primary { 
-    background-color: #4F46E5; 
-    color: white; 
-    margin-top: 0; /* Remove margens antigas */
-}
+.btn-primary { background-color: #4F46E5; color: white; margin-top: 0; }
 .btn-primary:hover { background-color: #4338CA; }
 
-.btn-secondary { 
-    background-color: #E5E7EB; 
-    color: #374151; 
-    margin-right: 0; /* Remove margens antigas */
-}
+.btn-secondary { background-color: #E5E7EB; color: #374151; margin-right: 0; }
 .btn-secondary:hover { background-color: #D1D5DB; }
 
-/* Botão especial de "Adicionar" dentro do formulário */
 .btn-action { 
     background-color: #10B981; 
     color: white; 
     width: auto; 
-    padding: 8px 16px; 
-    margin-top: 10px; 
-    display: inline-block;
+    padding: 10px 20px; 
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
 }
+
+/* Botão Pontilhado para Adicionar Curso */
+.btn-dashed {
+    width: 100%;
+    border: 2px dashed #4F46E5;
+    background-color: #EEF2FF;
+    color: #4F46E5;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background 0.2s;
+}
+.btn-dashed:hover { background-color: #E0E7FF; }
 
 /* --- VALIDATION STYLES --- */
 .error-border { border-color: #EF4444 !important; }
@@ -102,9 +110,49 @@ input:focus, textarea:focus { border-color: #4F46E5; }
 .autocomplete-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #F3F4F6; }
 .autocomplete-item:hover { background-color: #F3F4F6; }
 
-/* --- COURSE REPEATER --- */
-.course-card { background: #F9FAFB; border: 1px solid #E5E7EB; padding: 15px; border-radius: 8px; margin-bottom: 10px; position: relative; }
-.course-card .remove-course { position: absolute; top: 10px; right: 10px; color: #EF4444; cursor: pointer; font-weight: bold; }
+/* --- COURSE MODULE --- */
+.course-form-box {
+    background: #F9FAFB; 
+    border: 1px solid #E5E7EB; 
+    padding: 20px; 
+    border-radius: 8px; 
+    margin-bottom: 20px;
+}
+
+.course-summary-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-left: 4px solid #10B981;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.course-summary-card h4 { font-size: 1.1rem; margin-bottom: 5px; color: #111827; margin-right: 60px; /* space for buttons */ }
+.course-summary-card p { font-size: 0.9rem; color: #6B7280; margin-bottom: 2px; }
+
+/* Botões de Ação no Card */
+.card-actions {
+    position: absolute; 
+    top: 15px; 
+    right: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.action-btn {
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+.action-btn.edit { color: #4F46E5; }
+.action-btn.delete { color: #EF4444; }
+.action-btn:hover { text-decoration: underline; }
 
 /* --- LOADING --- */
 #loading-overlay {
