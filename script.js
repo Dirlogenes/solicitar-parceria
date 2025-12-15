@@ -22,31 +22,22 @@ const productsNicTone = ["Lençol de borracha para isolamento absoluto Nic Tone"
 
 // --- VARIÁVEIS DE ESTADO ---
 let currentStep = 1;
-let citiesList = []; 
 let formData = {
     courses: []
 };
 let editingCourseIndex = -1; // -1 significa novo curso
 
 // Componentes de Input de Tag
-let tagInputProducts, tagInputPotenzaInterest, cityAutocomplete;
+let tagInputProducts, tagInputPotenzaInterest;
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // Fetch Cidades IBGE
-    try {
-        const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios');
-        const data = await response.json();
-        citiesList = data.map(c => `${c.nome} - ${c.microrregiao.mesorregiao.UF.sigla}`);
-        if(cityAutocomplete) cityAutocomplete.updateSource(citiesList);
-    } catch (e) {
-        console.error("Erro IBGE. Modo manual ativo.", e);
-    }
-
-    // Inicializar Componentes Especiais
+    // Inicializar Componentes de Produtos (Tags)
     tagInputProducts = new TagInput('products-tag-input-wrapper', [], true);
     tagInputPotenzaInterest = new TagInput('potenza-interest-wrapper', productsPotenza, true);
-    cityAutocomplete = new TagInput('city-wrapper', citiesList, false); 
+
+    // Inicializar Autocomplete de Cidade (Lógica separada)
+    setupCityAutocomplete();
 
     setupEventListeners();
     updateProgressBar();
@@ -55,7 +46,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => document.getElementById('name').focus(), 100);
 });
 
-// --- CLASSE TAG INPUT ---
+// --- LÓGICA ESPECÍFICA PARA CIDADE (IBGE) ---
+function setupCityAutocomplete() {
+    const cityInput = document.getElementById('city-input');
+    const suggestionsBox = document.getElementById('city-suggestions');
+    let cidadesIBGE = [];
+
+    // Busca na API
+    async function buscarCidadesIBGE(termo) {
+        try {
+            const response = await fetch(
+                `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${termo}`
+            );
+            const data = await response.json();
+
+            cidadesIBGE = data.map(cidade => ({
+                nome: cidade.nome,
+                uf: cidade.microrregiao.mesorregiao.UF.sigla
+            }));
+            
+            renderizarSugestoes();
+        } catch (error) {
+            console.error("Erro ao buscar cidades:", error);
+        }
+    }
+
+    // Renderiza lista
+    function renderizarSugestoes() {
+        suggestionsBox.innerHTML = '';
+        if(cidadesIBGE.length > 0) {
+            suggestionsBox.style.display = 'block';
+            // Mostra apenas os 10 primeiros para não travar
+            cidadesIBGE.slice(0, 10).forEach(cidade => {
+                const item = document.createElement('div');
+                item.classList.add('autocomplete-item');
+                item.textContent = `${cidade.nome} - ${cidade.uf}`;
+
+                item.addEventListener('click', () => {
+                    cityInput.value = `${cidade.nome} - ${cidade.uf}`;
+                    suggestionsBox.style.display = 'none';
+                    suggestionsBox.innerHTML = '';
+                });
+
+                suggestionsBox.appendChild(item);
+            });
+        } else {
+            suggestionsBox.style.display = 'none';
+        }
+    }
+
+    // Listener de digitação
+    cityInput.addEventListener('input', async () => {
+        const termo = cityInput.value.trim();
+        
+        if (termo.length < 3) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        await buscarCidadesIBGE(termo);
+    });
+
+    // Fechar ao clicar fora
+    document.addEventListener('click', e => {
+        if (!cityInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+}
+
+
+// --- CLASSE TAG INPUT (PARA PRODUTOS) ---
 class TagInput {
     constructor(containerId, sourceData, isMulti) {
         this.container = document.getElementById(containerId);
@@ -191,7 +252,6 @@ function setupEventListeners() {
     document.querySelectorAll('.btn-prev').forEach(btn => btn.addEventListener('click', prevStep));
     document.querySelector('.btn-submit').addEventListener('click', submitForm);
 
-    // Eventos de Checkbox/Radio...
     const brandChecks = document.querySelectorAll('#brands-group input');
     const noneCheck = document.getElementById('chk-brand-none');
     brandChecks.forEach(chk => {
@@ -309,7 +369,6 @@ function goToStep(stepIndex) {
     currentStep = stepIndex;
     updateProgressBar();
 
-    // AUTO-FOCUS: Encontra o primeiro input visível e foca
     const firstInput = nextStepDiv.querySelector('input, textarea, select');
     if (firstInput) {
         setTimeout(() => firstInput.focus(), 100);
@@ -400,9 +459,12 @@ function validateStep(step) {
         setError(document.getElementById('phone'), null, !valid);
     }
     if (step === 4) { 
-        const val = cityAutocomplete.getValue();
+        // Validação da Cidade (Verifica se o input não está vazio)
+        const val = document.getElementById('city-input').value.trim();
         valid = val !== '';
-        setError(document.getElementById('city-wrapper'), null, !valid);
+        // Aqui assumimos que se o utilizador digitou, é válido, mas o ideal é que ele clique.
+        // O código de envio pegará o texto exato do input.
+        setError(document.getElementById('city-input'), null, !valid);
     }
     if (step === 5) { 
         const val = document.getElementById('instagram').value.trim();
@@ -482,7 +544,6 @@ function showCourseForm() {
     document.getElementById('course-form-container').classList.remove('hidden');
     document.getElementById('course-add-error').style.display = 'none';
 
-    // Foca no nome do curso ao abrir
     setTimeout(() => document.getElementById('c-name').focus(), 100);
 }
 
@@ -510,7 +571,6 @@ function clearCourseForm() {
 }
 
 function addCourse() {
-    // 1. Coleta e Validação
     const name = document.getElementById('c-name').value.trim();
     
     const types = [];
@@ -534,8 +594,6 @@ function addCourse() {
     const linkDiv = document.getElementById('c-link-divulgacao').value.trim();
     const linkCont = document.getElementById('c-link-conteudo').value.trim();
 
-    // Validação de Campos Obrigatórios
-    // Nome, Tipo, Região, Frequência, Duração, Alunos são obrigatórios
     if (name === '' || types.length === 0 || region === '' || freq === '' || duration === '' || students === '') {
         document.getElementById('course-add-error').style.display = 'block';
         return;
@@ -590,7 +648,6 @@ function renderCourses() {
     }
 }
 
-// Funções Globais
 window.removeCourse = function(index) {
     if(confirm("Tem certeza que deseja excluir este curso?")) {
         formData.courses.splice(index, 1);
@@ -659,7 +716,8 @@ async function submitForm() {
     const name = document.getElementById('name').value;
     const email = document.getElementById('email').value;
     const phone = document.getElementById('phone').value;
-    const city = cityAutocomplete.getValue();
+    // Captura o valor direto do input de cidade agora
+    const city = document.getElementById('city-input').value;
     const instagram = document.getElementById('instagram').value;
     
     const partTypes = Array.from(document.querySelectorAll('#partnership-type-group input:checked')).map(c => c.value).join(', ');
