@@ -36,15 +36,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios');
         const data = await response.json();
+        // Mapeia para formato legível
         citiesList = data.map(c => `${c.nome} - ${c.microrregiao.mesorregiao.UF.sigla}`);
+        // Atualiza o componente de cidade com a lista carregada
+        if(cityAutocomplete) cityAutocomplete.updateSource(citiesList);
     } catch (e) {
-        console.error("Erro IBGE", e);
+        console.error("Erro ao carregar IBGE. Modo manual ativado.", e);
+        // Não faz mal se falhar, o utilizador agora pode digitar manualmente
     }
 
     // Inicializar Componentes Especiais
     tagInputProducts = new TagInput('products-tag-input-wrapper', [], true);
     tagInputPotenzaInterest = new TagInput('potenza-interest-wrapper', productsPotenza, true);
-    cityAutocomplete = new TagInput('city-wrapper', citiesList, false); // Single selection
+    
+    // Inicializa cidade vazio, será preenchido pelo fetch acima
+    cityAutocomplete = new TagInput('city-wrapper', citiesList, false); 
 
     setupEventListeners();
     updateProgressBar();
@@ -54,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 class TagInput {
     constructor(containerId, sourceData, isMulti) {
         this.container = document.getElementById(containerId);
-        this.sourceData = sourceData;
+        this.sourceData = sourceData || [];
         this.isMulti = isMulti;
         this.selectedItems = [];
         this.render();
@@ -68,7 +74,7 @@ class TagInput {
         this.container.innerHTML = '';
         this.container.className = 'tag-input-container';
         
-        // Render Tags
+        // Render Tags (Itens selecionados)
         this.selectedItems.forEach((item, index) => {
             const tag = document.createElement('div');
             tag.className = 'tag';
@@ -78,18 +84,32 @@ class TagInput {
         });
 
         // Input
+        // Só mostra o input se for Multi-seleção OU se ainda não tiver nada selecionado
         if (this.isMulti || this.selectedItems.length === 0) {
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'tag-input-field';
-            input.placeholder = this.selectedItems.length === 0 ? 'Digite para buscar...' : '';
+            input.placeholder = this.selectedItems.length === 0 ? 'Digite e tecle Enter...' : '';
             
             // Events
             input.oninput = (e) => this.handleInput(e);
+            
             input.onkeydown = (e) => {
-                if(e.key === 'Enter') e.preventDefault();
-                if(e.key === 'Backspace' && input.value === '') this.remove(this.selectedItems.length - 1);
+                // CORREÇÃO: Permitir Enter para adicionar texto livre
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    if (input.value.trim() !== '') {
+                        this.add(input.value.trim());
+                        input.value = '';
+                        this.closeList();
+                    }
+                }
+                // Backspace para apagar item anterior
+                if(e.key === 'Backspace' && input.value === '') {
+                    this.remove(this.selectedItems.length - 1);
+                }
             };
+
             input.onfocus = () => this.container.classList.add('focus');
             input.onblur = () => setTimeout(() => {
                 this.container.classList.remove('focus');
@@ -100,12 +120,12 @@ class TagInput {
             this.inputElement = input;
         }
 
-        // List Container
+        // List Container (Dropdown)
         this.listContainer = document.createElement('div');
         this.listContainer.className = 'autocomplete-list';
         this.container.appendChild(this.listContainer);
 
-        // Click container to focus input
+        // Ao clicar no container, focar no input
         this.container.onclick = (e) => {
             if (e.target === this.container && this.inputElement) this.inputElement.focus();
         };
@@ -116,20 +136,23 @@ class TagInput {
         this.closeList();
         if (!val) return;
 
-        const matches = this.sourceData.filter(item => 
-            item.toLowerCase().includes(val) && !this.selectedItems.includes(item)
-        );
+        // Filtra apenas se houver dados na lista (sourceData)
+        if (this.sourceData.length > 0) {
+            const matches = this.sourceData.filter(item => 
+                item.toLowerCase().includes(val) && !this.selectedItems.includes(item)
+            ).slice(0, 10); // Limita a 10 resultados para não travar
 
-        if (matches.length > 0) {
-            this.listContainer.innerHTML = '';
-            this.listContainer.style.display = 'block';
-            matches.forEach(match => {
-                const div = document.createElement('div');
-                div.className = 'autocomplete-item';
-                div.innerText = match;
-                div.onclick = () => this.add(match);
-                this.listContainer.appendChild(div);
-            });
+            if (matches.length > 0) {
+                this.listContainer.innerHTML = '';
+                this.listContainer.style.display = 'block';
+                matches.forEach(match => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.innerText = match;
+                    div.onclick = () => this.add(match);
+                    this.listContainer.appendChild(div);
+                });
+            }
         }
     }
 
@@ -137,10 +160,12 @@ class TagInput {
         if (this.isMulti) {
             this.selectedItems.push(item);
         } else {
+            // Se for single, substitui o array
             this.selectedItems = [item];
         }
         this.render();
-        if(this.inputElement) this.inputElement.focus();
+        // Mantém o foco se for multi, senão perde o foco
+        if(this.isMulti && this.inputElement) this.inputElement.focus();
     }
 
     remove(index) {
@@ -255,21 +280,12 @@ function updateProductSource() {
 function nextStep() {
     if (validateStep(currentStep)) {
         const next = getNextStepIndex(currentStep);
-        
-        // Lógica de "Submit" se o next for além do Q13 ou se Q13 for pulado
         if (next > 13) {
-            // Caso raro onde lógica de skip leva ao fim
             submitForm(); 
             return;
         }
-
-        // Transição Especial: Se estivermos no passo final do fluxo e clicarmos "Próximo",
-        // mas o passo final real for o submit (botão separado no Q13),
-        // a lógica aqui trata apenas a troca de telas visíveis.
-        
         goToStep(next);
     } else {
-        // Efeito visual na tela atual
         const currentDiv = document.querySelector(`.step[data-step="${currentStep}"]`);
         currentDiv.classList.add('shake');
         setTimeout(() => currentDiv.classList.remove('shake'), 500);
@@ -292,13 +308,11 @@ function getNextStepIndex(current) {
     let next = current + 1;
 
     // Lógica Condicional de Pulo
-    if (current === 8) { // Após Produtos
+    if (current === 8) { 
         const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
         const isFirstTime = brands.includes("Ainda não utilizei");
         const hasPotenza = brands.includes("Potenza");
         
-        // Se NÃO tem Potenza E NÃO é primeira vez -> Vai para Q9 (Motivo)
-        // Caso contrário -> Pula para Q11 (Parcerias Ativas)
         if (!hasPotenza && !isFirstTime) {
             return 9;
         } else {
@@ -306,14 +320,13 @@ function getNextStepIndex(current) {
         }
     }
 
-    if (current === 9) return 10; // Q9 sempre vai para Q10
-    if (current === 10) return 11; // Q10 sempre vai para Q11
+    if (current === 9) return 10;
+    if (current === 10) return 11;
 
-    if (current === 11) { // Após Parcerias Ativas
+    if (current === 11) {
             const hasNone = document.getElementById('chk-no-partners').checked;
-            // Se Nenhuma parceria -> Pula Exclusividade (Q12) -> Vai verificar Cursos (Q13)
-            if (hasNone) return checkCoursesStep(12); // Pula Q12
-            return 12; // Vai para Q12
+            if (hasNone) return checkCoursesStep(12);
+            return 12; 
     }
 
     if (current === 12) {
@@ -323,27 +336,20 @@ function getNextStepIndex(current) {
     return next;
 }
 
-// Helper para verificar se vai para Cursos (13) ou Fim
 function checkCoursesStep(fromStep) {
     const hasCourses = document.getElementById('chk-cursos').checked;
     if (hasCourses) return 13;
-    // Se não tem cursos, o formulário acabou. 
-    // Como o botão da Q12/Q11 é "Próximo", precisamos disparar o submit se não houver Q13.
-    // Vamos tratar isso fazendo o botão da última etapa visível virar "Enviar" visualmente ou 
-    // chamar o submit direto. Para simplificar, se chegar aqui, chamamos submitForm.
     submitForm();
-    return fromStep; // Mantém no passo para evitar erro visual enquanto envia
+    return fromStep;
 }
 
 function getPrevStepIndex(current) {
     if (current === 13) {
-        // Se veio de onde? Depende da lógica inversa
         const hasPartners = !document.getElementById('chk-no-partners').checked;
         return hasPartners ? 12 : 11;
     }
     if (current === 12) return 11;
     if (current === 11) {
-            // Veio do 10 ou do 8?
             const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value);
             const isFirstTime = brands.includes("Ainda não utilizei");
             const hasPotenza = brands.includes("Potenza");
@@ -366,7 +372,6 @@ function validateStep(step) {
     let valid = true;
     const stepDiv = document.querySelector(`.step[data-step="${step}"]`);
     
-    // Helper
     const setError = (el, msg, isShow) => {
         const err = el.parentElement.querySelector('.error-msg') || el.querySelector('.error-msg') || stepDiv.querySelector('.error-msg');
         if(err) err.style.display = isShow ? 'block' : 'none';
@@ -376,44 +381,44 @@ function validateStep(step) {
         }
     };
 
-    // Validações
-    if (step === 1) { // Nome
+    if (step === 1) { 
         const val = document.getElementById('name').value.trim();
         valid = val !== '';
         setError(document.getElementById('name'), null, !valid);
     }
-    if (step === 2) { // Email regex
+    if (step === 2) { 
         const val = document.getElementById('email').value.trim();
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         valid = regex.test(val);
         setError(document.getElementById('email'), null, !valid);
     }
-    if (step === 3) { // Phone
+    if (step === 3) { 
         const val = document.getElementById('phone').value.replace(/\D/g, '');
         valid = val.length >= 8;
         setError(document.getElementById('phone'), null, !valid);
     }
-    if (step === 4) { // Cidade Tag Input Single
+    if (step === 4) { // Cidade Tag Input
+        // Validação: precisa ter selecionado algo (entrado como tag)
         const val = cityAutocomplete.getValue();
         valid = val !== '';
         setError(document.getElementById('city-wrapper'), null, !valid);
     }
-    if (step === 5) { // Instagram
+    if (step === 5) { 
         const val = document.getElementById('instagram').value.trim();
         valid = val !== '';
         setError(document.getElementById('instagram'), null, !valid);
     }
-    if (step === 6) { // Parceria Chk
+    if (step === 6) { 
         const checked = document.querySelectorAll('#partnership-type-group input:checked').length > 0;
         valid = checked;
         setError(document.getElementById('partnership-type-group'), null, !valid);
     }
-    if (step === 7) { // Marcas Chk
+    if (step === 7) { 
         const checked = document.querySelectorAll('#brands-group input:checked').length > 0;
         valid = checked;
         setError(document.getElementById('brands-group'), null, !valid);
     }
-    if (step === 8) { // Produtos Tags
+    if (step === 8) { 
         const tags = tagInputProducts.getValue();
         valid = tags.length > 0;
         const err = document.getElementById('err-p8');
@@ -421,7 +426,7 @@ function validateStep(step) {
         if(!valid) document.getElementById('products-tag-input-wrapper').classList.add('error-border');
         else document.getElementById('products-tag-input-wrapper').classList.remove('error-border');
     }
-    if (step === 9) { // Motivo Potenza
+    if (step === 9) { 
         const checked = document.querySelector('input[name="potenza_reason"]:checked');
         valid = !!checked;
         if(valid && checked.value === 'Outro') {
@@ -429,7 +434,7 @@ function validateStep(step) {
         }
         setError(document.getElementById('potenza-reason-group'), null, !valid);
     }
-    if (step === 10) { // Interesse Potenza
+    if (step === 10) { 
         const checked = document.querySelector('input[name="potenza_interest"]:checked');
         valid = !!checked;
         if(valid && checked.value === 'Sim') {
@@ -437,7 +442,7 @@ function validateStep(step) {
         }
         setError(document.getElementById('potenza-interest-bool'), null, !valid);
     }
-    if (step === 11) { // Parcerias Ativas
+    if (step === 11) { 
         const dentais = document.getElementById('chk-dentais').checked;
         const empresas = document.getElementById('chk-empresas').checked;
         const none = document.getElementById('chk-no-partners').checked;
@@ -449,7 +454,7 @@ function validateStep(step) {
         
         setError(document.getElementById('active-partnerships-group'), null, !valid);
     }
-    if (step === 12) { // Exclusividade
+    if (step === 12) { 
         const checked = document.querySelector('input[name="exclusivity"]:checked');
         valid = !!checked;
         if(valid && checked.value === 'Sim') {
@@ -457,7 +462,7 @@ function validateStep(step) {
         }
         setError(document.getElementById('exclusivity-group'), null, !valid);
     }
-    if (step === 13) { // Cursos
+    if (step === 13) { 
         valid = formData.courses.length > 0;
         const err = document.getElementById('course-list-error');
         err.style.display = valid ? 'none' : 'block';
@@ -490,11 +495,8 @@ function addCourse() {
     }
     err.style.display = 'none';
 
-    // Adicionar ao Array
     formData.courses.push(values);
     renderCourses();
-    
-    // Limpar inputs
     inputs.forEach(id => document.getElementById(id).value = '');
 }
 
@@ -513,7 +515,6 @@ function renderCourses() {
     });
 }
 
-// Precisa estar no escopo global para o onclick html funcionar
 window.removeCourse = function(index) {
     formData.courses.splice(index, 1);
     renderCourses();
@@ -521,7 +522,6 @@ window.removeCourse = function(index) {
 
 // --- ENVIO (RD STATION) ---
 async function submitForm() {
-    // Validação final do passo atual antes de enviar
     if (!validateStep(currentStep)) {
         const currentDiv = document.querySelector(`.step[data-step="${currentStep}"]`);
         currentDiv.classList.add('shake');
@@ -531,21 +531,16 @@ async function submitForm() {
 
     document.getElementById('loading-overlay').classList.remove('hidden');
 
-    // 1. Coletar Dados
     const name = document.getElementById('name').value;
     const email = document.getElementById('email').value;
     const phone = document.getElementById('phone').value;
-    
-    // Custom Fields
     const city = cityAutocomplete.getValue();
     const instagram = document.getElementById('instagram').value;
     
     const partTypes = Array.from(document.querySelectorAll('#partnership-type-group input:checked')).map(c => c.value).join(', ');
     const brands = Array.from(document.querySelectorAll('#brands-group input:checked')).map(c => c.value).join(', ');
-    
     const products = tagInputProducts.getValue().join(', ');
     
-    // Lógica Potenza
     let motivoPotenza = "";
     const potReasonOpt = document.querySelector('input[name="potenza_reason"]:checked');
     if(potReasonOpt) {
@@ -562,13 +557,11 @@ async function submitForm() {
         }
     }
 
-    // Parcerias Ativas
     let parceriasAtivas = [];
     if(document.getElementById('chk-dentais').checked) parceriasAtivas.push("Dentais: " + document.getElementById('input-dentais').value);
     if(document.getElementById('chk-empresas').checked) parceriasAtivas.push("Empresas: " + document.getElementById('input-empresas').value);
     if(document.getElementById('chk-no-partners').checked) parceriasAtivas.push("Nenhuma");
     
-    // Exclusividade
     const exclOpt = document.querySelector('input[name="exclusivity"]:checked');
     if(exclOpt) {
             const exclTxt = exclOpt.value === "Sim" ? "Sim: " + document.getElementById('input-exclusivity').value : "Não";
@@ -576,7 +569,6 @@ async function submitForm() {
     }
     const strParcerias = parceriasAtivas.join(' | ');
 
-    // Cursos (Formatado)
     let strCursos = "";
     if(formData.courses.length > 0) {
         strCursos = formData.courses.map(c => 
@@ -584,7 +576,6 @@ async function submitForm() {
         ).join('\n----------------\n');
     }
 
-    // 2. Montar Payload
     const payload = {
         token_rdstation: 'b32e0b962e0ec0de400f8215112b8a08',
         identificador: 'solicitacao-parceria-phs-externo',
@@ -603,10 +594,8 @@ async function submitForm() {
         cf_tipos_de_cursos_e_treinamentos: strCursos
     };
 
-    // 3. Converter para x-www-form-urlencoded
     const formBody = Object.keys(payload).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(payload[key])).join('&');
 
-    // 4. Fetch
     try {
         await fetch('https://www.rdstation.com.br/api/1.3/conversions', {
             method: 'POST',
@@ -615,10 +604,6 @@ async function submitForm() {
             },
             body: formBody
         });
-        
-        // RD Station nem sempre retorna 200 JSON limpo em POST direto do browser por causa de CORS,
-        // mas o request é disparado. Em produção, assume-se sucesso ou trata-se erro de rede.
-        // Para garantir a UX, vamos mostrar sucesso após o await.
         
         document.getElementById('loading-overlay').classList.add('hidden');
         document.getElementById('partner-form').classList.add('hidden');
