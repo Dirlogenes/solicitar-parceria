@@ -55,8 +55,10 @@
 
         <div class="step hidden" data-step="4">
             <h2>De onde você é? (Cidade/UF)</h2>
-            <div class="input-group" id="city-wrapper">
-                <div class="error-msg">Selecione sua cidade da lista ou digite e pressione Enter</div>
+            <div class="input-group" style="position: relative;">
+                <input type="text" id="city-input" placeholder="Digite sua cidade..." autocomplete="off">
+                <div id="city-suggestions" class="autocomplete-list"></div>
+                <div class="error-msg">Selecione uma cidade válida da lista</div>
             </div>
             <div class="nav-buttons">
                 <button class="btn btn-secondary btn-prev">Voltar</button>
