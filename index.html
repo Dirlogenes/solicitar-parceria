@@ -27,7 +27,7 @@
             <div class="nav-buttons">
                 <button class="btn btn-primary btn-next">Próximo</button>
             </div>
-            </div>
+        </div>
 
         <div class="step hidden" data-step="2">
             <h2>Qual é o seu e-mail?</h2>
@@ -56,7 +56,7 @@
         <div class="step hidden" data-step="4">
             <h2>De onde você é? (Cidade/UF)</h2>
             <div class="input-group" id="city-wrapper">
-                <div class="error-msg">Selecione sua cidade da lista</div>
+                <div class="error-msg">Selecione sua cidade da lista ou digite e pressione Enter</div>
             </div>
             <div class="nav-buttons">
                 <button class="btn btn-secondary btn-prev">Voltar</button>
@@ -196,41 +196,65 @@
 
         <div class="step hidden" data-step="13">
             <h2>Módulo de Cursos</h2>
-            <div class="sub-label">Adicione abaixo os cursos que você ministra.</div>
+            <div class="sub-label">Cadastre os cursos que você ministra.</div>
             
             <div id="courses-list"></div>
 
-            <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #E5E7EB;">
-                <h3 style="font-size: 1rem; margin-bottom: 10px;">Adicionar Novo Curso</h3>
-                
-                <label>Nome do Curso</label>
-                <input type="text" id="c-name" class="course-input">
-                
-                <label>Tipo (Teórico/Prático)</label>
-                <input type="text" id="c-type" class="course-input">
-                
-                <label>Regiões de Atuação</label>
-                <input type="text" id="c-region" class="course-input">
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label>Frequência (anual)</label>
-                        <input type="text" id="c-freq" class="course-input">
+            <button id="btn-show-course-form" class="btn-dashed">+ Adicionar curso</button>
+
+            <div id="course-form-container" class="hidden">
+                <div class="course-form-box">
+                    <h3 id="form-course-title">Adicionar Novo Curso</h3>
+                    
+                    <label>Nome do Curso *</label>
+                    <input type="text" id="c-name" class="course-input">
+                    
+                    <label style="margin-top:15px">Tipo * (Selecione todos que se aplicam)</label>
+                    <div class="checkbox-group" id="c-type-group">
+                        <label><input type="checkbox" value="Teórico"> Teórico</label>
+                        <label><input type="checkbox" value="Prático"> Prático</label>
+                        <label><input type="checkbox" value="Hands-on"> Hands-on</label>
+                        <label><input type="checkbox" value="Curso Vip"> Curso Vip</label>
+                        <label><input type="checkbox" value="Pós-graduação"> Pós-graduação</label>
+                        <label><input type="checkbox" value="Imersão"> Imersão</label>
+                        <label style="flex-wrap: wrap;">
+                            <input type="checkbox" value="Outro" id="chk-ctype-other"> Outro 
+                            <input type="text" id="c-type-other-text" placeholder="Qual?" class="hidden" style="margin-left: 10px; flex-grow: 1; padding: 5px;">
+                        </label>
                     </div>
-                    <div>
-                        <label>Duração (horas/dias)</label>
-                        <input type="text" id="c-dur" class="course-input">
+
+                    <label style="margin-top:15px">Em quais regiões costuma realizar?</label>
+                    <div class="sub-label">Liste cidades, estados, regiões e/ou países</div>
+                    <input type="text" id="c-region" class="course-input">
+
+                    <label style="margin-top:15px">Qual é a frequência?</label>
+                    <div class="radio-group" id="c-freq-group">
+                        <label><input type="radio" name="c_freq" value="Datas fixas e definidas com antecedência"> Datas fixas e definidas com antecedência.</label>
+                        <label><input type="radio" name="c_freq" value="De acordo com demanda"> De acordo com demanda.</label>
+                    </div>
+
+                    <label style="margin-top:15px">Qual a duração?</label>
+                    <div class="sub-label">Ex: “44h”, “5 finais de semana”, “1 semestre”</div>
+                    <input type="text" id="c-duration" class="course-input">
+
+                    <label style="margin-top:15px">Qual costuma ser a média de alunos que participam?</label>
+                    <input type="text" id="c-students" class="course-input">
+
+                    <label style="margin-top:15px">Divulgação (Link)</label>
+                    <div class="sub-label">Site, página, apresentação ou arte utilizada</div>
+                    <input type="text" id="c-link-divulgacao" class="course-input" placeholder="https://...">
+
+                    <label style="margin-top:15px">Conteúdo (Link)</label>
+                    <div class="sub-label">Apresentação, resultados clínicos, fotos, materiais</div>
+                    <input type="text" id="c-link-conteudo" class="course-input" placeholder="https://...">
+
+                    <div class="error-msg" id="course-add-error" style="margin-bottom: 15px;">Preencha o Nome e o Tipo do curso.</div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn btn-secondary" id="btn-cancel-course" style="width: auto;">Cancelar</button>
+                        <button class="btn btn-action" id="btn-save-course" style="margin-top:0;">Salvar Curso</button>
                     </div>
                 </div>
-
-                <label>Média de Alunos</label>
-                <input type="number" id="c-students" class="course-input">
-
-                <label>Links (Página/Divulgação)</label>
-                <input type="text" id="c-links" class="course-input">
-
-                <button class="btn btn-action" id="btn-add-course">Adicionar Curso</button>
-                <div class="error-msg" id="course-add-error">Preencha todos os campos do curso para adicionar</div>
             </div>
             
             <div class="error-msg" id="course-list-error">Adicione pelo menos um curso para continuar</div>
