@@ -92,7 +92,7 @@ input:focus, textarea:focus { border-color: #4F46E5; }
 .checkbox-group label, .radio-group label { display: flex; align-items: center; margin-bottom: 10px; font-weight: 400; cursor: pointer; }
 .checkbox-group input, .radio-group input { margin-right: 10px; width: 18px; height: 18px; }
 
-/* --- TAG INPUT COMPONENT --- */
+/* --- TAG INPUT COMPONENT & AUTOCOMPLETE --- */
 .tag-input-container {
     border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px; display: flex; flex-wrap: wrap; gap: 8px; position: relative; min-height: 48px;
 }
@@ -104,8 +104,21 @@ input:focus, textarea:focus { border-color: #4F46E5; }
 .tag-input-field {
     border: none !important; flex-grow: 1; min-width: 120px; padding: 4px !important; margin: 0 !important; outline: none;
 }
+
+/* Estilo comum para dropdowns (Tags e Cidade) */
 .autocomplete-list {
-    position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #D1D5DB; border-top: none; max-height: 200px; overflow-y: auto; z-index: 50; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: none;
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    right: 0; 
+    background: white; 
+    border: 1px solid #D1D5DB; 
+    border-top: none; 
+    max-height: 200px; 
+    overflow-y: auto; 
+    z-index: 50; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+    display: none;
 }
 .autocomplete-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #F3F4F6; }
 .autocomplete-item:hover { background-color: #F3F4F6; }
