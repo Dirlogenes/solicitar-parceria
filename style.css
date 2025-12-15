@@ -22,13 +22,51 @@ input[type="text"], input[type="email"], input[type="tel"], input[type="number"]
 }
 input:focus, textarea:focus { border-color: #4F46E5; }
 
-/* --- BUTTONS --- */
-.btn { padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 1rem; transition: background 0.2s; }
-.btn-primary { background-color: #4F46E5; color: white; width: 100%; margin-top: 20px; }
+/* --- BUTTONS (Atualizado) --- */
+.nav-buttons { 
+    display: flex; 
+    justify-content: center; /* Centraliza os botões */
+    gap: 15px; /* Espaço entre eles */
+    margin-top: 30px; 
+}
+
+.btn { 
+    padding: 10px 0; /* Menos altura (padding vertical reduzido) */
+    border-radius: 6px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    border: none; 
+    font-size: 0.95rem; /* Fonte levemente menor */
+    transition: background 0.2s, transform 0.1s;
+    width: 130px; /* Largura fixa para ambos ficarem iguais */
+    text-align: center;
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-primary { 
+    background-color: #4F46E5; 
+    color: white; 
+    margin-top: 0; /* Remove margens antigas */
+}
 .btn-primary:hover { background-color: #4338CA; }
-.btn-secondary { background-color: #E5E7EB; color: #374151; margin-right: 10px; }
-.btn-action { background-color: #10B981; color: white; width: auto; display: inline-block; font-size: 0.9rem; padding: 8px 16px; margin-top: 10px; }
-.nav-buttons { display: flex; justify-content: space-between; margin-top: 30px; }
+
+.btn-secondary { 
+    background-color: #E5E7EB; 
+    color: #374151; 
+    margin-right: 0; /* Remove margens antigas */
+}
+.btn-secondary:hover { background-color: #D1D5DB; }
+
+/* Botão especial de "Adicionar" dentro do formulário */
+.btn-action { 
+    background-color: #10B981; 
+    color: white; 
+    width: auto; 
+    padding: 8px 16px; 
+    margin-top: 10px; 
+    display: inline-block;
+}
 
 /* --- VALIDATION STYLES --- */
 .error-border { border-color: #EF4444 !important; }
