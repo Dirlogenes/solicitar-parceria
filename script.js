@@ -1,7 +1,7 @@
 // --- DADOS ESTÁTICOS ---
 const productsTokuyama = [
     "Resina Estelite Omega",
-    "Resina Estelite Omega Bianco",
+    "Resina Estelite Bianco",
     "Resina Palfique LX5",
     "Resina Estelite Posterior",
     "Resina Palfique Omnichroma (Standard, Blocker e Trial)",
